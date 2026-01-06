@@ -16,7 +16,8 @@ const api = {
   captureWindow: (id: number, sourceTitle: string) =>
     ipcRenderer.invoke('capture-window', { id, sourceTitle }),
   copyImageToClipboard: (filePath: string) => ipcRenderer.invoke('copy-image-to-clipboard', filePath),
-  toggleAutoLaunch: (enabled: boolean) => ipcRenderer.invoke('settings:toggle-auto-launch', enabled)
+  toggleAutoLaunch: (enabled: boolean) => ipcRenderer.invoke('settings:toggle-auto-launch', enabled),
+  log: (msg: any) => ipcRenderer.send('log', msg)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -46,6 +46,11 @@ export class DatabaseManager {
     return stmt.all() as Capture[]
   }
 
+  public getCapture(id: string): Capture | undefined {
+    const stmt = this.db.prepare('SELECT * FROM captures WHERE id = ?')
+    return stmt.get(id) as Capture | undefined
+  }
+
   public deleteCapture(id: string): void {
     const stmt = this.db.prepare('DELETE FROM captures WHERE id = ?')
     stmt.run(id)

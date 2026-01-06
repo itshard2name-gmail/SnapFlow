@@ -11,7 +11,7 @@ interface WindowInfo {
 }
 
 interface CaptureOverlayProps {
-  mode: 'region' | 'window'
+  mode: 'region' | 'window' | 'scroll'
   onConfirm: (coords: { x: number; y: number; width: number; height: number }) => void
   onCancel: () => void
 }
@@ -81,7 +81,8 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
 
       // 4. Draw border around the hole
       // In window mode, use a different color (e.g. green or same blue)
-      ctx.strokeStyle = mode === 'window' ? '#10b981' : '#3b82f6'
+      // Scroll mode gets Purple (#8b5cf6), Window mode gets Green (#10b981), Region gets Blue (#3b82f6)
+      ctx.strokeStyle = mode === 'scroll' ? '#8b5cf6' : (mode === 'window' ? '#10b981' : '#3b82f6')
       ctx.lineWidth = 2
       ctx.strokeRect(rect.x, rect.y, rect.width, rect.height)
 
@@ -97,7 +98,8 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
       const label =
         mode === 'window' && activeWindow
           ? `${activeWindow.app}` // Show App Name
-          : `${rect.width} x ${rect.height}`
+          // Scroll or Region
+          : `${mode === 'scroll' ? 'Scroll Region: ' : ''}${rect.width} x ${rect.height}`
 
       ctx.fillText(label, rect.x + 5, labelY + 15)
     }
@@ -128,7 +130,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     // Initial draw to show the dim mask immediately
     draw(null)
 
-    // Fetch windows if in window mode
+    // Fetch windows only in window mode
     if (mode === 'window') {
       const fetchWindows = async () => {
         try {
@@ -156,6 +158,8 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
 
   // Mouse Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
+    // @ts-ignore
+    window.api.log(`[RENDERER-DEBUG] Mouse Down: mode=${mode} x=${e.nativeEvent.offsetX} y=${e.nativeEvent.offsetY}`)
     e.preventDefault()
     if (mode === 'window') {
       // Capture Specific Window
@@ -237,6 +241,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
 
   return (
     <div
+      style={{ pointerEvents: 'auto' }}
       className={`fixed inset-0 z-50 select-none bg-black/10 ${mode === 'window' ? 'cursor-pointer' : 'cursor-crosshair'}`}
     >
       <canvas
@@ -247,7 +252,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
         className="block touch-none w-screen h-screen object-contain"
       />
       <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/80 text-white px-4 py-2 rounded-full text-sm backdrop-blur border border-slate-700 pointer-events-none select-none z-[60]">
-        {mode === 'window' ? 'Click to Capture Window' : 'Click and Drag to Capture'} • ESC to
+        {mode === 'window' ? 'Click to Capture Window' : (mode === 'scroll' ? 'Drag to Select Scroll Area' : 'Click and Drag to Capture')} • ESC to
         Cancel
       </div>
     </div>

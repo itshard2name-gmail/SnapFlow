@@ -71,12 +71,14 @@ function App() {
   // Check for capture mode
   const query = new URLSearchParams(window.location.search)
   const mode = query.get('mode') || 'dashboard'
-  const isCaptureMode = mode === 'region' || mode === 'window'
+
+  console.log('[DEBUG] App.tsx Rendering. Mode:', mode)
+  const isCaptureMode = mode === 'region' || mode === 'window' || mode === 'scroll'
 
   if (isCaptureMode) {
     return (
       <CaptureOverlay
-        mode={mode as 'region' | 'window'}
+        mode={mode as 'region' | 'window' | 'scroll'}
         onConfirm={(rect) => {
           // @ts-ignore: window.api is exposed via preload script
           window.api.confirmCapture({ ...rect, sourceId: 'primary' })

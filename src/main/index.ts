@@ -46,7 +46,7 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
   })
 
   // Hide on close (macOS)
@@ -278,7 +278,31 @@ ipcMain.handle('get-all-captures', () => {
 })
 
 ipcMain.handle('delete-capture', (_, id: string) => {
-  dbManager.deleteCapture(id)
+  const capture = dbManager.getCapture(id)
+  if (capture) {
+    try {
+      // Delete the main file
+      if (capture.filePath && fs.existsSync(capture.filePath)) {
+        fs.unlinkSync(capture.filePath)
+        console.log('Deleted file:', capture.filePath)
+      }
+      
+      // Delete the thumbnail if it's a different file
+      if (
+        capture.thumbPath && 
+        capture.thumbPath !== capture.filePath && 
+        fs.existsSync(capture.thumbPath)
+      ) {
+        fs.unlinkSync(capture.thumbPath)
+        console.log('Deleted thumbnail:', capture.thumbPath)
+      }
+    } catch (error) {
+      console.error('Error deleting capture files:', error)
+    }
+    
+    // Always remove from DB to keep UI in sync
+    dbManager.deleteCapture(id)
+  }
 })
 
 ipcMain.handle('open-path', async (_, path: string) => {
