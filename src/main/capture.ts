@@ -28,8 +28,24 @@ export class CaptureManager {
   }
 
   private registerShortcuts() {
-    globalShortcut.register('CommandOrControl+Shift+A', () => {
-      this.startCapture()
+    const register = (accelerator: string, callback: () => void) => {
+      if (globalShortcut.isRegistered(accelerator)) {
+        globalShortcut.unregister(accelerator)
+      }
+      const success = globalShortcut.register(accelerator, callback)
+      if (!success) {
+        console.error(`Hotkey Conflict: ${accelerator}`)
+      } else {
+        console.log(`Hotkey Registered: ${accelerator}`)
+      }
+    }
+
+    register('Control+Shift+A', () => {
+      this.startCapture('region')
+    })
+    
+    register('Control+Shift+W', () => {
+      this.startCapture('window')
     })
   }
 
@@ -59,7 +75,7 @@ export class CaptureManager {
     })
   }
 
-  private async startCapture() {
+  private async startCapture(mode: 'region' | 'window' = 'region') {
     if (this.captureWindow) return
 
     const cursorPoint = screen.getCursorScreenPoint()
@@ -100,12 +116,12 @@ export class CaptureManager {
     })
 
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      const url = `${process.env['ELECTRON_RENDERER_URL']}/index.html?mode=capture`
+      const url = `${process.env['ELECTRON_RENDERER_URL']}/index.html?mode=${mode}`
       console.log('Loading CaptureWindow URL:', url)
       this.captureWindow.loadURL(url)
     } else {
       this.captureWindow.loadFile(join(__dirname, '../renderer/index.html'), {
-        search: '?mode=capture'
+        search: `?mode=${mode}`
       })
     }
 

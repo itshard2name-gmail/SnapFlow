@@ -11,7 +11,9 @@ const api = {
   onCaptureSource: (callback: (source: any) => void) => {
     ipcRenderer.on('capture-source', (_, source) => callback(source))
   },
-  openPath: (path: string) => ipcRenderer.invoke('open-path', path)
+  openPath: (path: string) => ipcRenderer.invoke('open-path', path),
+  getOpenWindows: () => ipcRenderer.invoke('get-open-windows'),
+  captureWindow: (id: number, sourceTitle: string) => ipcRenderer.invoke('capture-window', { id, sourceTitle })
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

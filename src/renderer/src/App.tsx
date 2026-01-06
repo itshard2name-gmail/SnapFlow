@@ -5,7 +5,7 @@ import { PreviewPanel } from './components/PreviewPanel'
 import { CaptureOverlay } from './components/CaptureOverlay'
 import { Capture } from '../../shared/types'
 
-function App(): JSX.Element {
+function App() {
   const [captures, setCaptures] = useState<Capture[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -48,13 +48,15 @@ function App(): JSX.Element {
 
   // Check for capture mode
   const query = new URLSearchParams(window.location.search)
-  const isCaptureMode = query.get('mode') === 'capture'
+  const mode = query.get('mode') || 'dashboard'
+  const isCaptureMode = mode === 'region' || mode === 'window'
 
   if (isCaptureMode) {
     // Dynamic import removed to comply with Context Isolation
     // CaptureOverlay is now imported statically
     return (
       <CaptureOverlay
+        mode={mode as 'region' | 'window'}
         onConfirm={(rect) => {
           // @ts-ignore
           window.api.confirmCapture({ ...rect, sourceId: 'primary' })

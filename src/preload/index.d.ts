@@ -3,6 +3,15 @@ import { ElectronAPI } from '@electron-toolkit/preload'
 declare global {
   interface Window {
     electron: ElectronAPI
-    api: unknown
+    api: {
+      getAllCaptures: () => Promise<import('../shared/types').Capture[]>
+      deleteCapture: (id: string) => Promise<void>
+      openPath: (path: string) => Promise<void>
+      confirmCapture: (rect: any) => void
+      cancelCapture: () => void
+      mockAddCapture: () => Promise<void>
+      getOpenWindows: () => Promise<any[]>
+      captureWindow: (id: number, sourceTitle: string) => Promise<any>
+    }
   }
 }
