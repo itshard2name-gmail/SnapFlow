@@ -2,23 +2,27 @@
 
 **Zero-Latency Screen Capture for Professionals.**
 
-Scope is a high-performance screen capture tool designed for speed and precision. Built on a modernized Electron architecture, it eliminates the traditional "overlay lag," ensuring that your flow detects windows and regions instantenously.
+Scope is a high-performance screen capture tool designed for speed, precision, and uninterrupted workflows. Built on a modernized Electron architecture, it eliminates "overlay lag" and "focus stealing," ensuring you can capture exactly what you see—even fleeting menus and popups.
 
 ![Scope Banner](./build/icon.png)
 
 ## Why Scope?
 
 ### ⚡️ Zero-Latency Engine
-Traditional capture tools pause your screen to load a static image, creating a 2-3 second delay. Scope uses a **Live Overlay** architecture that appears instantly (< 50ms), allowing you to capture fleeting moments without hesitation.
+Traditional tools pause your screen to load an overlay, often causing menus to close. Scope uses a **Live Overlay** architecture that appears instantly (< 16ms), allowing you to capture the moment without disrupting the state of your desktop.
+
+### 📜 Smart Scroll Capture (New)
+Capture full web pages or long documents effortlessly. Scope's **Smart Stitching** algorithm automatically detects overlapping content and stitches them into a seamless, pixel-perfect long screenshot.
 
 ### 🎯 Intelligent Window Snapping
-Hover over any application—even in multi-monitor setups—and Scope will instantly highlight the window boundaries. 
-- **Privacy-First**: We use macOS Accessibility APIs to detect window frames without recording screen contents until you click.
-- **Smart Handling**: Correctly handles high-DPI (Retina) scaling and multi-display offsets.
+Hover over any application—even in multi-monitor setups—and Scope instantly highlights window boundaries.
+- **Privacy-First**: Uses native macOS APIs to detect frames without recording screen content.
+- **Retina-Ready**: Pixel-perfect scaling for high-DPI displays.
 
-### 💧 Seamless UX
-- **Dropdown Support**: Designed to capture menus, popups, and dropdowns. Scope's non-intruding overlay won't steal focus, keeping your detailed UI interactions open while you capture.
-- **Instant Dashboard**: Your captures are saved to a gallery immediately. Closing the dashboard simply hides it, so it's ready instantly when you need it again.
+### 💧 Seamless Workflow
+- **Dropdown Safe**: Designed to capture menus, tooltips, and popups. Scope won't steal focus when activated.
+- **Instant Dashboard**: Review, copy to clipboard, or save your captures immediately.
+- **Local Storage**: All data lives on your machine. No cloud uploads.
 
 ## Quick Start
 
@@ -28,12 +32,13 @@ Hover over any application—even in multi-monitor setups—and Scope will insta
 | :--- | :--- | :--- |
 | **Region Capture** | `Ctrl` + `Shift` + `A` | Drag to select any area. Precision pixel-perfect selection. |
 | **Window Capture** | `Ctrl` + `Shift` + `W` | Auto-detects windows under your cursor. Click to snap. |
-| **Cancel** | `Esc` |  Instantly dismiss the overlay. |
+| **Scroll Capture** | `Ctrl` + `Shift` + `S` | Select a region and watch it auto-scroll and stitch. |
+| **Cancel** | `Esc` |  Instantly dismiss the overlay or stop scrolling. |
 
 ### Installation (macOS)
 1. Download the latest `.dmg` release.
 2. Drag **Scope** to your Applications folder.
-3. On first launch, you will be prompted to grant **Screen Recording** and **Accessibility** permissions. This is required for the zero-latency engine to detect windows.
+3. On first launch, you will be prompted to grant **Screen Recording** and **Accessibility** permissions. This is required for window detection and simulation.
 
 ---
 
