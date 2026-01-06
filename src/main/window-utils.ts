@@ -1,5 +1,6 @@
-import { exec } from 'child_process'
-import { join } from 'path' // Changed from resolve to join for cleaner path handling in electron dev/prod context could vary
+import { execFile } from 'child_process'
+import { join } from 'path'
+import { app } from 'electron'
 
 // Type definition for Window Info
 export interface WindowInfo {
@@ -15,17 +16,22 @@ export interface WindowInfo {
 
 export function getOpenWindows(): Promise<WindowInfo[]> {
   return new Promise((resolve, reject) => {
-    // Determine path to the swift script
-    // In dev: src/main/scripts/get-windows.swift
-    // In prod: resources/scripts/get-windows.swift (we need to handle this later, for now assuming dev structure or we can bundle it)
+    // In production, the binary is in Contents/Resources/window-utils
+    // In dev, we can point to resources/window-utils in the project root
+    let executablePath = ''
+    
+    if (app.isPackaged) {
+      executablePath = join(process.resourcesPath, 'window-utils')
+    } else {
+      executablePath = join(__dirname, '../../resources/window-utils')
+    }
 
-    // For now, let's assume we are running relative to the project root for the swift command if we use absolute paths
-    const scriptPath = join(__dirname, '../../src/main/scripts/get-windows.swift')
+    console.log('Executing window-utils from:', executablePath)
 
-    // Command to run the swift script
-    exec(`swift "${scriptPath}"`, (error, stdout, stderr) => {
+    execFile(executablePath, (error, stdout, stderr) => {
       if (error) {
-        console.error('Error executing swift script:', stderr)
+        console.error('Error executing window-utils:', error)
+        console.error('Stderr:', stderr)
         reject(error)
         return
       }
@@ -35,7 +41,7 @@ export function getOpenWindows(): Promise<WindowInfo[]> {
         resolve(windows)
       } catch (e) {
         console.error('Error parsing window list JSON:', e)
-        resolve([]) // Return empty list on parse error
+        resolve([]) 
       }
     })
   })

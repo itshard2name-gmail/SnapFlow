@@ -1,14 +1,41 @@
-import { app, shell, BrowserWindow, ipcMain, globalShortcut, clipboard, nativeImage } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, globalShortcut, clipboard, nativeImage, Tray, Menu, systemPreferences } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { DatabaseManager } from './database'
+import { CaptureManager } from './capture'
+import { getOpenWindows } from './window-utils'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+import fs from 'fs'
+
+const execPromise = promisify(exec)
+
+// Check for Accessibility Permissions on macOS
+if (process.platform === 'darwin') {
+  const trusted = systemPreferences.isTrustedAccessibilityClient(true)
+  console.log('Accessibility Permission:', trusted ? 'Granted' : 'Not Granted')
+}
 import icon from '../../resources/icon.png?asset'
 
+let tray: Tray | null = null
+let mainWindow: BrowserWindow | null = null
+let isQuitting = false
+
 function createWindow(): void {
+  // If window exists, just show it
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+    return
+  }
+
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
+    title: 'Scope',
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
@@ -20,6 +47,15 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+  })
+
+  // Hide on close (macOS)
+  mainWindow.on('close', (event) => {
+    if (process.platform === 'darwin' && !isQuitting) {
+      event.preventDefault()
+      mainWindow?.hide()
+    }
+    // On other platforms, let it close naturally
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -58,6 +94,27 @@ app.whenReady().then(() => {
   console.log('--- APP STARTING ---')
   console.log('Build Verification ID:', Date.now()) // PROOF OF NEW BUILD
   console.log('--------------------')
+
+  // System Tray Setup
+  const iconPath = nativeImage.createFromPath(join(__dirname, '../../resources/icon.png'))
+  // Resize icon for Tray (usually 16x16 or 22x22 for macOS)
+  const trayIcon = iconPath.resize({ width: 22, height: 22 })
+  tray = new Tray(trayIcon)
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Open Scope', click: () => createWindow() },
+    { type: 'separator' },
+    { label: 'Quit Scope', click: () => app.quit() }
+  ])
+  tray.setToolTip('Scope')
+  tray.setContextMenu(contextMenu)
+
+  // Auto-launch Setup
+  ipcMain.handle('settings:toggle-auto-launch', (_, enabled: boolean) => {
+    app.setLoginItemSettings({
+      openAtLogin: enabled
+    })
+    return app.getLoginItemSettings().openAtLogin
+  })
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
@@ -136,33 +193,14 @@ app.whenReady().then(() => {
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    // MODIFIED: explicitly check mainWindow existence for our "Hide-on-Close" logic
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show()
+    } else {
+        createWindow()
+    }
   })
 })
-
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-app.on('will-quit', () => {
-  globalShortcut.unregisterAll()
-})
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
-import { DatabaseManager } from './database'
-import { CaptureManager } from './capture'
-import { getOpenWindows } from './window-utils'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-import fs from 'fs'
-
-const execPromise = promisify(exec)
 
 const dbManager = new DatabaseManager()
 
@@ -256,4 +294,21 @@ ipcMain.handle('copy-image-to-clipboard', async (_, filePath: string) => {
     console.error('Failed to copy image to clipboard:', error)
     return false
   }
+})
+
+app.on('before-quit', () => {
+  isQuitting = true
+})
+
+// Quit when all windows are closed, except on macOS. There, it's common
+// for applications and their menu bar to stay active until the user quits
+// explicitly with Cmd + Q.
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
+})
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
 })

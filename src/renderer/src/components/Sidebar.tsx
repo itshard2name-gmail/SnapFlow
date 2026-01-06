@@ -9,7 +9,7 @@ export function Sidebar({ onRefresh }: SidebarProps) {
         <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
           <span className="text-white font-bold">S</span>
         </div>
-        <h1 className="text-lg font-bold text-white">SnapFlow</h1>
+        <h1 className="text-lg font-bold text-white">Scope</h1>
       </div>
 
       <nav className="space-y-2 flex-1">

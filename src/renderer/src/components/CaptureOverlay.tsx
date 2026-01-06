@@ -20,7 +20,8 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
   console.log('CaptureOverlay component mounted! Mode:', mode)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
+  // No longer needed: sourceImage state
+  // const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
 
   // Region Selection State
   const [isSelecting, setIsSelecting] = useState(false)
@@ -35,11 +36,11 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     if (mode === 'window') {
       return activeWindow
         ? {
-            x: activeWindow.x,
-            y: activeWindow.y,
-            width: activeWindow.width,
-            height: activeWindow.height
-          }
+          x: activeWindow.x,
+          y: activeWindow.y,
+          width: activeWindow.width,
+          height: activeWindow.height
+        }
         : null
     }
     return {
@@ -51,11 +52,10 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
   }
 
   const draw = (
-    img: HTMLImageElement | null,
     rect: { x: number; y: number; width: number; height: number } | null
   ) => {
     const canvas = canvasRef.current
-    if (!canvas || !img) return
+    if (!canvas) return
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -64,36 +64,28 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     const logicalWidth = canvas.width / dpr
     const logicalHeight = canvas.height / dpr
 
-    // Clear and draw full image
+    // 1. Clear everything
     ctx.clearRect(0, 0, logicalWidth, logicalHeight)
 
-    if (img) {
-      ctx.drawImage(img, 0, 0, logicalWidth, logicalHeight)
-    }
-
-    // Draw dim mask
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'
+    // 2. Fill with semi-transparent dim mask
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)' // Slightly darker for better contrast
     ctx.fillRect(0, 0, logicalWidth, logicalHeight)
 
     if (rect && rect.width > 0 && rect.height > 0) {
-      // Clear the mask for the selected area (making it bright)
+      // 3. Cut a hole (Destination Out)
       ctx.save()
-      ctx.beginPath()
-      ctx.rect(rect.x, rect.y, rect.width, rect.height)
-      ctx.clip()
-
-      // Draw the full image again into the clipped region
-      ctx.drawImage(img, 0, 0, logicalWidth, logicalHeight)
-
+      ctx.globalCompositeOperation = 'destination-out'
+      ctx.fillStyle = 'rgba(0, 0, 0, 1)'
+      ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
       ctx.restore()
 
-      // Draw border
+      // 4. Draw border around the hole
       // In window mode, use a different color (e.g. green or same blue)
       ctx.strokeStyle = mode === 'window' ? '#10b981' : '#3b82f6'
       ctx.lineWidth = 2
       ctx.strokeRect(rect.x, rect.y, rect.width, rect.height)
 
-      // Draw Dimensions tooltip
+      // 5. Draw Dimensions tooltip
       // Position appropriately
       const labelY = rect.y - 25 < 0 ? rect.y + rect.height + 5 : rect.y - 25
 
@@ -130,6 +122,11 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     // Force transparent background for the capture window
     document.documentElement.style.backgroundColor = 'transparent'
     document.body.style.backgroundColor = 'transparent'
+    // Ensure no background image interferes
+    document.body.style.backgroundImage = 'none'
+
+    // Initial draw to show the dim mask immediately
+    draw(null)
 
     // Fetch windows if in window mode
     if (mode === 'window') {
@@ -146,63 +143,30 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
       fetchWindows()
     }
 
-    // Listen for the background source from main process
-    // @ts-ignore
-    const removeSourceListener = window.api.onCaptureSource((source) => {
-      console.log('Renderer received image data', source)
-
-      let finalUrl = ''
-      if (source.filePath) {
-        let rawPath = source.filePath
-        rawPath = rawPath.replace(/\\/g, '/')
-        if (!rawPath.startsWith('media://')) {
-          finalUrl = `media://${rawPath}?t=${Date.now()}`
-        } else {
-          finalUrl = rawPath
-        }
-      } else if (source.base64Image) {
-        finalUrl = `data:image/png;base64,${source.base64Image}`
-      }
-
-      // Background Render Priority
-      const bgUrl = `url("${finalUrl}")`
-      document.body.style.backgroundImage = bgUrl
-      document.body.style.backgroundRepeat = 'no-repeat'
-      document.body.style.backgroundPosition = 'center'
-      document.body.style.backgroundSize = 'contain'
-
-      // Image Object Validation
-      const img = new Image()
-      img.onload = () => {
-        setSourceImage(img)
-        draw(img, null)
-      }
-      img.src = finalUrl
-    })
-
     // Close on Escape
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCancel()
     }
     window.addEventListener('keydown', handleKeyDown)
 
-    // @ts-ignore
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
-      // @ts-ignore (if API provides removeListener, otherwise standard event removal)
-      // Note: The onCaptureSource implementation above doesn't return a remove function directly
-      // usually electron usage: ipcRenderer.removeListener...
     }
   }, [mode])
 
   // Mouse Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
     if (mode === 'window') {
       // Capture Specific Window
       if (activeWindow) {
-        // @ts-ignore
-        window.api.captureWindow(activeWindow.id, activeWindow.app).then(() => {
-          onCancel() // Close overlay after capture
+        // Use onConfirm from props which maps to window.api.confirmCapture
+        // We need to pass coordinates relative to the overlay window (which is the current display)
+        onConfirm({
+          x: activeWindow.x - window.screenX,
+          y: activeWindow.y - window.screenY,
+          width: activeWindow.width,
+          height: activeWindow.height
         })
       }
       return
@@ -213,7 +177,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     const pos = { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY }
     setStartPos(pos)
     setCurrentPos(pos)
-    draw(sourceImage, { x: pos.x, y: pos.y, width: 0, height: 0 })
+    draw({ x: pos.x, y: pos.y, width: 0, height: 0 })
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -234,7 +198,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
         setActiveWindow(found)
         // Convert Global Window Frame to Local Canvas Coordinates for Drawing
         // We subtract the current window's global position to get the relative offset
-        draw(sourceImage, {
+        draw({
           x: found.x - window.screenX,
           y: found.y - window.screenY,
           width: found.width,
@@ -242,7 +206,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
         })
       } else if (!found && activeWindow) {
         setActiveWindow(null)
-        draw(sourceImage, null)
+        draw(null)
       }
       return
     }
@@ -256,7 +220,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
       width: Math.abs(pos.x - startPos.x),
       height: Math.abs(pos.y - startPos.y)
     }
-    draw(sourceImage, rect)
+    draw(rect)
   }
 
   const handleMouseUp = () => {
@@ -267,7 +231,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     if (rect && rect.width > 5 && rect.height > 5) {
       onConfirm({ ...rect })
     } else {
-      draw(sourceImage, null)
+      draw(null)
     }
   }
 

@@ -1,43 +1,28 @@
-appId: com.electron.app
-productName: snapflow
+appId: com.electron.scope
+productName: Scope
 directories:
+  output: dist_electron
   buildResources: build
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-asarUnpack:
-  - resources/**
-win:
-  executableName: snapflow
-nsis:
-  artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
-  createDesktopShortcut: always
+  - out/**/*
+  - node_modules/**/*
+  - package.json
 mac:
-  entitlementsInherit: build/entitlements.mac.plist
+  target: dmg
+  icon: build/icon.png
+  category: public.app-category.productivity
+  entitlements: build/entitlements.mac.plist
+  extraResources:
+    - from: resources/window-utils
+      to: window-utils
   extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
+    NSCameraUsageDescription: "Scope requires access to the camera for screen recording."
+    NSMicrophoneUsageDescription: "Scope requires access to the microphone for audio recording."
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}.${ext}
+win:
+  target: nsis
+  icon: resources/icon.ico
 linux:
-  target:
-    - AppImage
-    - snap
-    - deb
-  maintainer: electronjs.org
-  category: Utility
-appImage:
-  artifactName: ${name}-${version}.${ext}
-npmRebuild: false
-publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  target: AppImage
+  icon: resources/icon.png
