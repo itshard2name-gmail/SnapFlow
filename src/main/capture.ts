@@ -1,11 +1,4 @@
-import {
-  BrowserWindow,
-  screen,
-  ipcMain,
-  globalShortcut,
-  app,
-  nativeImage
-} from 'electron'
+import { BrowserWindow, screen, ipcMain, globalShortcut, app, nativeImage } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { execSync, exec } from 'child_process'
@@ -43,7 +36,7 @@ export class CaptureManager {
     register('Control+Shift+A', () => {
       this.startCapture('region')
     })
-    
+
     register('Control+Shift+W', () => {
       this.startCapture('window')
     })
@@ -54,7 +47,8 @@ export class CaptureManager {
       // Play shutter sound immediately (macOS only)
       // Placed here for lowest possible latency in Main process
       if (process.platform === 'darwin') {
-        const soundPath = '/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Grab.aif'
+        const soundPath =
+          '/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Grab.aif'
         exec(`afplay "${soundPath}"`, (error) => {
           if (error) console.error('Failed to play shutter sound:', error)
         })
@@ -196,8 +190,6 @@ export class CaptureManager {
 
   private async processCapture(x: number, y: number, width: number, height: number) {
     console.log(`Processing capture: x=${x}, y=${y}, w=${width}, h=${height}`)
-
-
 
     try {
       if (!this.currentCapturePath || !fs.existsSync(this.currentCapturePath)) {

@@ -13,7 +13,9 @@ const api = {
   },
   openPath: (path: string) => ipcRenderer.invoke('open-path', path),
   getOpenWindows: () => ipcRenderer.invoke('get-open-windows'),
-  captureWindow: (id: number, sourceTitle: string) => ipcRenderer.invoke('capture-window', { id, sourceTitle })
+  captureWindow: (id: number, sourceTitle: string) =>
+    ipcRenderer.invoke('capture-window', { id, sourceTitle }),
+  copyImageToClipboard: (filePath: string) => ipcRenderer.invoke('copy-image-to-clipboard', filePath)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

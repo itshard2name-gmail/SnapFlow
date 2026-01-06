@@ -18,10 +18,10 @@ export function getOpenWindows(): Promise<WindowInfo[]> {
     // Determine path to the swift script
     // In dev: src/main/scripts/get-windows.swift
     // In prod: resources/scripts/get-windows.swift (we need to handle this later, for now assuming dev structure or we can bundle it)
-    
+
     // For now, let's assume we are running relative to the project root for the swift command if we use absolute paths
     const scriptPath = join(__dirname, '../../src/main/scripts/get-windows.swift')
-    
+
     // Command to run the swift script
     exec(`swift "${scriptPath}"`, (error, stdout, stderr) => {
       if (error) {

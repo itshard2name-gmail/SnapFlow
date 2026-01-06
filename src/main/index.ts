@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, globalShortcut } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, globalShortcut, clipboard, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -166,7 +166,7 @@ const execPromise = promisify(exec)
 
 const dbManager = new DatabaseManager()
 
-// We can keep the old CaptureManager if it's doing something specific, 
+// We can keep the old CaptureManager if it's doing something specific,
 // or just use our new handlers. For now, we'll initialize it as before.
 new CaptureManager(dbManager)
 
@@ -174,63 +174,66 @@ ipcMain.handle('get-open-windows', async () => {
   return await getOpenWindows()
 })
 
-ipcMain.handle('capture-window', async (_, { id, sourceTitle }: { id: number, sourceTitle: string }) => {
-  const tempPath = join(app.getPath('userData'), `temp-${Date.now()}.png`)
-  const finalPath = join(app.getPath('userData'), `capture-${Date.now()}.png`)
-  
-  // Play shutter sound immediately (macOS only)
-  if (process.platform === 'darwin') {
-    const soundPath = '/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Grab.aif'
-    exec(`afplay "${soundPath}"`, (error) => {
-      if (error) console.error('Failed to play shutter sound:', error)
-    })
-  }
-  
-  try {
-    // screencapture -x (no sound) -l <windowId> <path>
-    // Note: -o (no shadow) is optional, user didn't specify, but often preferred for clean 'window' captures. 
-    // Plan said: -x -l [windowID].
-    await execPromise(`screencapture -x -o -l ${id} "${tempPath}"`)
-    
-    // Check if file created
-    if (fs.existsSync(tempPath)) {
-      // Move to final or just use tempPath? Let's use it as is for now.
-      // Actually, let's keep it clean.
-      fs.renameSync(tempPath, finalPath)
-      
-      // Get dimensions of the file
-      // We can use 'sips' or just trust the window bounds passed earlier? 
-      // Better to read the file or just use 'image-size' lib? 
-      // For simplicity let's rely on standard metadata or simple assumption for now.
-      // Wait, we need width/height for DB.
-      // Let's us use 'sips -g pixelWidth -g pixelHeight file'
-      const { stdout } = await execPromise(`sips -g pixelWidth -g pixelHeight "${finalPath}"`)
-      const widthMatch = stdout.match(/pixelWidth: (\d+)/)
-      const heightMatch = stdout.match(/pixelHeight: (\d+)/)
-      const width = widthMatch ? parseInt(widthMatch[1]) : 0
-      const height = heightMatch ? parseInt(heightMatch[1]) : 0
+ipcMain.handle(
+  'capture-window',
+  async (_, { id, sourceTitle }: { id: number; sourceTitle: string }) => {
+    const tempPath = join(app.getPath('userData'), `temp-${Date.now()}.png`)
+    const finalPath = join(app.getPath('userData'), `capture-${Date.now()}.png`)
 
-      const capture = await dbManager.addCapture({
-        filePath: finalPath,
-        thumbPath: finalPath,
-        sourceTitle: sourceTitle || 'Window Capture',
-        width,
-        height
+    // Play shutter sound immediately (macOS only)
+    if (process.platform === 'darwin') {
+      const soundPath =
+        '/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Grab.aif'
+      exec(`afplay "${soundPath}"`, (error) => {
+        if (error) console.error('Failed to play shutter sound:', error)
       })
-
-      // Notify renderers
-      BrowserWindow.getAllWindows().forEach(w => w.webContents.send('capture-saved'))
-      
-      return capture
-    } else {
-      throw new Error('Screenshot file was not created')
     }
 
-  } catch (error) {
-    console.error('Capture window failed:', error)
-    throw error
+    try {
+      // screencapture -x (no sound) -l <windowId> <path>
+      // Note: -o (no shadow) is optional, user didn't specify, but often preferred for clean 'window' captures.
+      // Plan said: -x -l [windowID].
+      await execPromise(`screencapture -x -o -l ${id} "${tempPath}"`)
+
+      // Check if file created
+      if (fs.existsSync(tempPath)) {
+        // Move to final or just use tempPath? Let's use it as is for now.
+        // Actually, let's keep it clean.
+        fs.renameSync(tempPath, finalPath)
+
+        // Get dimensions of the file
+        // We can use 'sips' or just trust the window bounds passed earlier?
+        // Better to read the file or just use 'image-size' lib?
+        // For simplicity let's rely on standard metadata or simple assumption for now.
+        // Wait, we need width/height for DB.
+        // Let's us use 'sips -g pixelWidth -g pixelHeight file'
+        const { stdout } = await execPromise(`sips -g pixelWidth -g pixelHeight "${finalPath}"`)
+        const widthMatch = stdout.match(/pixelWidth: (\d+)/)
+        const heightMatch = stdout.match(/pixelHeight: (\d+)/)
+        const width = widthMatch ? parseInt(widthMatch[1]) : 0
+        const height = heightMatch ? parseInt(heightMatch[1]) : 0
+
+        const capture = await dbManager.addCapture({
+          filePath: finalPath,
+          thumbPath: finalPath,
+          sourceTitle: sourceTitle || 'Window Capture',
+          width,
+          height
+        })
+
+        // Notify renderers
+        BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('capture-saved'))
+
+        return capture
+      } else {
+        throw new Error('Screenshot file was not created')
+      }
+    } catch (error) {
+      console.error('Capture window failed:', error)
+      throw error
+    }
   }
-})
+)
 
 ipcMain.handle('get-all-captures', () => {
   return dbManager.getAllCaptures()
@@ -242,4 +245,15 @@ ipcMain.handle('delete-capture', (_, id: string) => {
 
 ipcMain.handle('open-path', async (_, path: string) => {
   await shell.openPath(path)
+})
+
+ipcMain.handle('copy-image-to-clipboard', async (_, filePath: string) => {
+  try {
+    const image = nativeImage.createFromPath(filePath)
+    clipboard.writeImage(image)
+    return true
+  } catch (error) {
+    console.error('Failed to copy image to clipboard:', error)
+    return false
+  }
 })

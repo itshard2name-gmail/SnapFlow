@@ -33,7 +33,14 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
 
   const getRect = () => {
     if (mode === 'window') {
-      return activeWindow ? { x: activeWindow.x, y: activeWindow.y, width: activeWindow.width, height: activeWindow.height } : null
+      return activeWindow
+        ? {
+            x: activeWindow.x,
+            y: activeWindow.y,
+            width: activeWindow.width,
+            height: activeWindow.height
+          }
+        : null
     }
     return {
       x: Math.min(startPos.x, currentPos.x),
@@ -43,7 +50,10 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     }
   }
 
-  const draw = (img: HTMLImageElement | null, rect: { x: number, y: number, width: number, height: number } | null) => {
+  const draw = (
+    img: HTMLImageElement | null,
+    rect: { x: number; y: number; width: number; height: number } | null
+  ) => {
     const canvas = canvasRef.current
     if (!canvas || !img) return
 
@@ -92,9 +102,10 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
       ctx.fillStyle = 'white'
       ctx.font = '12px sans-serif'
 
-      const label = mode === 'window' && activeWindow
-        ? `${activeWindow.app}` // Show App Name
-        : `${rect.width} x ${rect.height}`
+      const label =
+        mode === 'window' && activeWindow
+          ? `${activeWindow.app}` // Show App Name
+          : `${rect.width} x ${rect.height}`
 
       ctx.fillText(label, rect.x + 5, labelY + 15)
     }
@@ -180,7 +191,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
       window.removeEventListener('keydown', handleKeyDown)
       // @ts-ignore (if API provides removeListener, otherwise standard event removal)
       // Note: The onCaptureSource implementation above doesn't return a remove function directly
-      // usually electron usage: ipcRenderer.removeListener... 
+      // usually electron usage: ipcRenderer.removeListener...
     }
   }, [mode])
 
@@ -214,11 +225,9 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
       const globalY = e.screenY
 
       // Find top-most window under cursor in Global Space
-      const found = windows.find(w =>
-        globalX >= w.x &&
-        globalX <= w.x + w.width &&
-        globalY >= w.y &&
-        globalY <= w.y + w.height
+      const found = windows.find(
+        (w) =>
+          globalX >= w.x && globalX <= w.x + w.width && globalY >= w.y && globalY <= w.y + w.height
       )
 
       if (found && found.id !== activeWindow?.id) {
@@ -263,7 +272,9 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
   }
 
   return (
-    <div className={`fixed inset-0 z-50 select-none bg-black/10 ${mode === 'window' ? 'cursor-pointer' : 'cursor-crosshair'}`}>
+    <div
+      className={`fixed inset-0 z-50 select-none bg-black/10 ${mode === 'window' ? 'cursor-pointer' : 'cursor-crosshair'}`}
+    >
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
@@ -272,7 +283,8 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
         className="block touch-none w-screen h-screen object-contain"
       />
       <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/80 text-white px-4 py-2 rounded-full text-sm backdrop-blur border border-slate-700 pointer-events-none select-none z-[60]">
-        {mode === 'window' ? 'Click to Capture Window' : 'Click and Drag to Capture'} • ESC to Cancel
+        {mode === 'window' ? 'Click to Capture Window' : 'Click and Drag to Capture'} • ESC to
+        Cancel
       </div>
     </div>
   )

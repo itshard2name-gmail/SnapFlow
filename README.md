@@ -11,11 +11,11 @@ An Electron application with React and TypeScript for advanced screen capturing.
 
 ## Shortcuts
 
-| Action | Shortcut | Description |
-|--------|----------|-------------|
-| **Region Mode** | `Control` + `Shift` + `A` | Manually select a region to capture. |
+| Action          | Shortcut                  | Description                                                |
+| --------------- | ------------------------- | ---------------------------------------------------------- |
+| **Region Mode** | `Control` + `Shift` + `A` | Manually select a region to capture.                       |
 | **Window Mode** | `Control` + `Shift` + `W` | Hover to highlight and click to capture a specific window. |
-| **Cancel** | `Esc` | Exit capture mode without saving. |
+| **Cancel**      | `Esc`                     | Exit capture mode without saving.                          |
 
 ## Recommended IDE Setup
 
