@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback, ReactElement } from 'react'
 
 interface WindowInfo {
   id: number
@@ -16,7 +16,7 @@ interface CaptureOverlayProps {
   onCancel: () => void
 }
 
-export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProps) {
+export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProps): ReactElement {
   console.log('CaptureOverlay component mounted! Mode:', mode)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -32,15 +32,15 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
   const [windows, setWindows] = useState<WindowInfo[]>([])
   const [activeWindow, setActiveWindow] = useState<WindowInfo | null>(null)
 
-  const getRect = () => {
+  const getRect = useCallback(() => {
     if (mode === 'window') {
       return activeWindow
         ? {
-          x: activeWindow.x,
-          y: activeWindow.y,
-          width: activeWindow.width,
-          height: activeWindow.height
-        }
+            x: activeWindow.x,
+            y: activeWindow.y,
+            width: activeWindow.width,
+            height: activeWindow.height
+          }
         : null
     }
     return {
@@ -49,61 +49,62 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
       width: Math.abs(currentPos.x - startPos.x),
       height: Math.abs(currentPos.y - startPos.y)
     }
-  }
+  }, [mode, activeWindow, startPos, currentPos])
 
-  const draw = (
-    rect: { x: number; y: number; width: number; height: number } | null
-  ) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+  const draw = useCallback(
+    (rect: { x: number; y: number; width: number; height: number } | null): void => {
+      const canvas = canvasRef.current
+      if (!canvas) return
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
 
-    const dpr = window.devicePixelRatio || 1
-    const logicalWidth = canvas.width / dpr
-    const logicalHeight = canvas.height / dpr
+      const dpr = window.devicePixelRatio || 1
+      const logicalWidth = canvas.width / dpr
+      const logicalHeight = canvas.height / dpr
 
-    // 1. Clear everything
-    ctx.clearRect(0, 0, logicalWidth, logicalHeight)
+      // 1. Clear everything
+      ctx.clearRect(0, 0, logicalWidth, logicalHeight)
 
-    // 2. Fill with semi-transparent dim mask
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)' // Slightly darker for better contrast
-    ctx.fillRect(0, 0, logicalWidth, logicalHeight)
+      // 2. Fill with semi-transparent dim mask
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)' // Slightly darker for better contrast
+      ctx.fillRect(0, 0, logicalWidth, logicalHeight)
 
-    if (rect && rect.width > 0 && rect.height > 0) {
-      // 3. Cut a hole (Destination Out)
-      ctx.save()
-      ctx.globalCompositeOperation = 'destination-out'
-      ctx.fillStyle = 'rgba(0, 0, 0, 1)'
-      ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
-      ctx.restore()
+      if (rect && rect.width > 0 && rect.height > 0) {
+        // 3. Cut a hole (Destination Out)
+        ctx.save()
+        ctx.globalCompositeOperation = 'destination-out'
+        ctx.fillStyle = 'rgba(0, 0, 0, 1)'
+        ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
+        ctx.restore()
 
-      // 4. Draw border around the hole
-      // In window mode, use a different color (e.g. green or same blue)
-      // Scroll mode gets Purple (#8b5cf6), Window mode gets Green (#10b981), Region gets Blue (#3b82f6)
-      ctx.strokeStyle = mode === 'scroll' ? '#8b5cf6' : (mode === 'window' ? '#10b981' : '#3b82f6')
-      ctx.lineWidth = 2
-      ctx.strokeRect(rect.x, rect.y, rect.width, rect.height)
+        // 4. Draw border around the hole
+        // In window mode, use a different color (e.g. green or same blue)
+        // Scroll mode gets Purple (#8b5cf6), Window mode gets Green (#10b981), Region gets Blue (#3b82f6)
+        ctx.strokeStyle = mode === 'scroll' ? '#8b5cf6' : mode === 'window' ? '#10b981' : '#3b82f6'
+        ctx.lineWidth = 2
+        ctx.strokeRect(rect.x, rect.y, rect.width, rect.height)
 
-      // 5. Draw Dimensions tooltip
-      // Position appropriately
-      const labelY = rect.y - 25 < 0 ? rect.y + rect.height + 5 : rect.y - 25
+        // 5. Draw Dimensions tooltip
+        // Position appropriately
+        const labelY = rect.y - 25 < 0 ? rect.y + rect.height + 5 : rect.y - 25
 
-      ctx.fillStyle = '#1e293b'
-      ctx.fillRect(rect.x, labelY, mode === 'window' ? 120 : 80, 20)
-      ctx.fillStyle = 'white'
-      ctx.font = '12px sans-serif'
+        ctx.fillStyle = '#1e293b'
+        ctx.fillRect(rect.x, labelY, mode === 'window' ? 120 : 80, 20)
+        ctx.fillStyle = 'white'
+        ctx.font = '12px sans-serif'
 
-      const label =
-        mode === 'window' && activeWindow
-          ? `${activeWindow.app}` // Show App Name
-          // Scroll or Region
-          : `${mode === 'scroll' ? 'Scroll Region: ' : ''}${rect.width} x ${rect.height}`
+        const label =
+          mode === 'window' && activeWindow
+            ? `${activeWindow.app}` // Show App Name
+            : // Scroll or Region
+              `${mode === 'scroll' ? 'Scroll Region: ' : ''}${rect.width} x ${rect.height}`
 
-      ctx.fillText(label, rect.x + 5, labelY + 15)
-    }
-  }
+        ctx.fillText(label, rect.x + 5, labelY + 15)
+      }
+    },
+    [mode, activeWindow]
+  )
 
   useEffect(() => {
     // Setup High-DPI Canvas
@@ -132,9 +133,9 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
 
     // Fetch windows only in window mode
     if (mode === 'window') {
-      const fetchWindows = async () => {
+      const fetchWindows = async (): Promise<void> => {
         try {
-          // @ts-ignore
+          // @ts-ignore: window.api is exposed via preload script
           const winList = await window.api.getOpenWindows()
           console.log('Fetched Windows:', winList.length)
           setWindows(winList)
@@ -146,20 +147,22 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     }
 
     // Close on Escape
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onCancel()
     }
     window.addEventListener('keydown', handleKeyDown)
 
-    return () => {
+    return (): void => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [mode])
+  }, [mode, draw, onCancel])
 
   // Mouse Handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // @ts-ignore
-    window.api.log(`[RENDERER-DEBUG] Mouse Down: mode=${mode} x=${e.nativeEvent.offsetX} y=${e.nativeEvent.offsetY}`)
+  const handleMouseDown = (e: React.MouseEvent): void => {
+    // @ts-ignore: window.api is exposed via preload script
+    window.api.log(
+      `[RENDERER-DEBUG] Mouse Down: mode=${mode} x=${e.nativeEvent.offsetX} y=${e.nativeEvent.offsetY}`
+    )
     e.preventDefault()
     if (mode === 'window') {
       // Capture Specific Window
@@ -184,7 +187,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     draw({ x: pos.x, y: pos.y, width: 0, height: 0 })
   }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent): void => {
     const pos = { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY }
 
     if (mode === 'window') {
@@ -227,7 +230,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     draw(rect)
   }
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (): void => {
     if (mode === 'window') return
 
     setIsSelecting(false)
@@ -252,8 +255,12 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
         className="block touch-none w-screen h-screen object-contain"
       />
       <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/80 text-white px-4 py-2 rounded-full text-sm backdrop-blur border border-slate-700 pointer-events-none select-none z-[60]">
-        {mode === 'window' ? 'Click to Capture Window' : (mode === 'scroll' ? 'Drag to Select Scroll Area' : 'Click and Drag to Capture')} • ESC to
-        Cancel
+        {mode === 'window'
+          ? 'Click to Capture Window'
+          : mode === 'scroll'
+            ? 'Drag to Select Scroll Area'
+            : 'Click and Drag to Capture'}{' '}
+        • ESC to Cancel
       </div>
     </div>
   )

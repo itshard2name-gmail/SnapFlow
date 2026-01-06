@@ -1,0 +1,31 @@
+
+> scope@2.0.0 lint
+> eslint --cache .
+
+
+/Users/KevinWang/Documents/antigravity/SnapFlow/src/main/capture.ts
+  268:9   error  'isScrolling' is never reassigned. Use 'const' instead  prefer-const
+  349:62  error  '_height' is defined but never used                     @typescript-eslint/no-unused-vars
+
+/Users/KevinWang/Documents/antigravity/SnapFlow/src/main/database.ts
+  17:3  error  Missing return type on function  @typescript-eslint/explicit-function-return-type
+
+/Users/KevinWang/Documents/antigravity/SnapFlow/src/main/index.ts
+   87:27  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  165:33  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  181:16  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  182:18  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/Users/KevinWang/Documents/antigravity/SnapFlow/src/preload/index.d.ts
+  10:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:67  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/KevinWang/Documents/antigravity/SnapFlow/src/preload/index.ts
+   9:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  11:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 13 problems (13 errors, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

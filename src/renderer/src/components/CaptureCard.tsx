@@ -1,5 +1,5 @@
 import { Capture } from '../../../shared/types'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, ReactElement } from 'react'
 
 interface CaptureCardProps {
   capture: Capture
@@ -17,13 +17,13 @@ export function CaptureCard({
   onDoubleClick,
   onDelete,
   onPreview
-}: CaptureCardProps) {
+}: CaptureCardProps): ReactElement {
   const [showConfirm, setShowConfirm] = useState(false)
   const [showCopied, setShowCopied] = useState(false)
   const confirmTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const handleCopyClick = async (e: React.MouseEvent) => {
+  const handleCopyClick = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()
     try {
       // @ts-ignore: window.api is exposed via preload script
@@ -40,7 +40,7 @@ export function CaptureCard({
     }
   }
 
-  const handleDeleteClick = (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent): void => {
     e.stopPropagation()
     if (showConfirm) {
       onDelete(capture.id)
@@ -53,13 +53,13 @@ export function CaptureCard({
     }
   }
 
-  const handlePreviewClick = (e: React.MouseEvent) => {
+  const handlePreviewClick = (e: React.MouseEvent): void => {
     e.stopPropagation()
     onPreview()
   }
 
   useEffect(() => {
-    return () => {
+    return (): void => {
       if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current)
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
     }
@@ -71,9 +71,10 @@ export function CaptureCard({
       onDoubleClick={onDoubleClick}
       className={`
         group relative cursor-pointer rounded-xl overflow-hidden border transition-all duration-300
-        ${isSelected
-          ? 'border-blue-500 ring-2 ring-blue-500/20 bg-slate-800 shadow-lg scale-[1.02]'
-          : 'border-slate-700/50 hover:border-slate-600 bg-slate-900 shadow-md hover:shadow-xl hover:-translate-y-0.5'
+        ${
+          isSelected
+            ? 'border-blue-500 ring-2 ring-blue-500/20 bg-slate-800 shadow-lg scale-[1.02]'
+            : 'border-slate-700/50 hover:border-slate-600 bg-slate-900 shadow-md hover:shadow-xl hover:-translate-y-0.5'
         }
       `}
     >

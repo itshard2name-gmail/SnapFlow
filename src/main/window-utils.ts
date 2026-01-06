@@ -19,7 +19,7 @@ export function getOpenWindows(): Promise<WindowInfo[]> {
     // In production, the binary is in Contents/Resources/window-utils
     // In dev, we can point to resources/window-utils in the project root
     let executablePath = ''
-    
+
     if (app.isPackaged) {
       executablePath = join(process.resourcesPath, 'window-utils')
     } else {
@@ -41,7 +41,7 @@ export function getOpenWindows(): Promise<WindowInfo[]> {
         resolve(windows)
       } catch (e) {
         console.error('Error parsing window list JSON:', e)
-        resolve([]) 
+        resolve([])
       }
     })
   })

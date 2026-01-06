@@ -7,8 +7,6 @@ import path from 'path'
 import { DatabaseManager } from './database'
 import sharp from 'sharp'
 
-
-
 export class CaptureManager {
   private captureWindow: BrowserWindow | null = null
   private dbManager: DatabaseManager
@@ -23,8 +21,8 @@ export class CaptureManager {
     this.registerIPC()
   }
 
-  private registerShortcuts() {
-    const register = (accelerator: string, callback: () => void) => {
+  private registerShortcuts(): void {
+    const register = (accelerator: string, callback: () => void): void => {
       if (globalShortcut.isRegistered(accelerator)) {
         globalShortcut.unregister(accelerator)
       }
@@ -49,7 +47,7 @@ export class CaptureManager {
     })
   }
 
-  private registerIPC() {
+  private registerIPC(): void {
     ipcMain.handle('capture-confirmed', async (_, { x, y, width, height }) => {
       // Unregister Escape immediately to restore system behavior
       this.cleanupCaptureShortcuts()
@@ -85,7 +83,7 @@ export class CaptureManager {
     })
   }
 
-  private setupCaptureShortcuts() {
+  private setupCaptureShortcuts(): void {
     // Register ESC to cancel capture since window is not focused
     // We check if it's already registered to avoid error
     if (!globalShortcut.isRegistered('Escape')) {
@@ -96,14 +94,14 @@ export class CaptureManager {
     }
   }
 
-  private cleanupCaptureShortcuts() {
+  private cleanupCaptureShortcuts(): void {
     // Unregister ESC only (don't unregister main hotkeys)
     if (globalShortcut.isRegistered('Escape')) {
       globalShortcut.unregister('Escape')
     }
   }
 
-  private async startCapture(mode: 'region' | 'window' | 'scroll' = 'region') {
+  private async startCapture(mode: 'region' | 'window' | 'scroll' = 'region'): Promise<void> {
     this.currentMode = mode
     const cursorPoint = screen.getCursorScreenPoint()
     const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
@@ -122,8 +120,8 @@ export class CaptureManager {
         backgroundColor: '#00000000',
         frame: false,
         // High level floating
-        alwaysOnTop: true, 
-        skipTaskbar: false, 
+        alwaysOnTop: true,
+        skipTaskbar: false,
         resizable: false,
         movable: false,
         focusable: true, // Keep true for now to debug input issues
@@ -138,15 +136,15 @@ export class CaptureManager {
           nodeIntegration: false
         }
       })
-      
+
       // DEBUG: Monitor loading
       this.captureWindow.webContents.on('did-finish-load', () => {
-        // @ts-ignore
+        // @ts-ignore: logging for debugging purposes
         console.log('[MAIN] Capture Window Loaded Successfully')
       })
-      
+
       this.captureWindow.webContents.on('did-fail-load', (_, errorCode, errorDescription) => {
-        // @ts-ignore
+        // @ts-ignore: logging for debugging purposes
         console.error('[MAIN-ERROR] Capture Window Failed to Load:', errorCode, errorDescription)
       })
 
@@ -155,9 +153,9 @@ export class CaptureManager {
 
       // Force Dock Icon to appear (Fix for type: 'panel' hiding it)
       if (process.platform === 'darwin' && app.dock) {
-        app.dock.show().catch(err => console.error('Failed to show dock icon:', err))
+        app.dock.show().catch((err) => console.error('Failed to show dock icon:', err))
       }
-      
+
       // Ensure visible everywhere
       this.captureWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
@@ -183,10 +181,11 @@ export class CaptureManager {
         height: Math.round(height)
       })
       // Reload to reset state if switching modes
-      const url = is.dev && process.env['ELECTRON_RENDERER_URL'] 
-         ? `${process.env['ELECTRON_RENDERER_URL']}/index.html?mode=${mode}`
-         : `file://${join(__dirname, '../renderer/index.html')}?mode=${mode}`
-      
+      const url =
+        is.dev && process.env['ELECTRON_RENDERER_URL']
+          ? `${process.env['ELECTRON_RENDERER_URL']}/index.html?mode=${mode}`
+          : `file://${join(__dirname, '../renderer/index.html')}?mode=${mode}`
+
       this.captureWindow.loadURL(url)
     }
 
@@ -199,9 +198,9 @@ export class CaptureManager {
     this.captureWindow.focus() // Force focus to ensure mouse events works
   }
 
-  private closeCaptureWindow() {
+  private closeCaptureWindow(): void {
     this.cleanupCaptureShortcuts()
-    
+
     if (this.captureWindow && !this.captureWindow.isDestroyed()) {
       this.captureWindow.hide()
       // Optional: notify renderer to reset?
@@ -209,11 +208,16 @@ export class CaptureManager {
     }
   }
 
-  private async startScrollCaptureLoop(x: number, y: number, width: number, height: number) {
+  private async startScrollCaptureLoop(
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): Promise<void> {
     // SAFETY GUARD: Ensure we are strictly in scroll mode
     if (this.currentMode !== 'scroll') {
-        console.error('[FATAL] startScrollCaptureLoop called but mode is:', this.currentMode)
-        return
+      console.error('[FATAL] startScrollCaptureLoop called but mode is:', this.currentMode)
+      return
     }
 
     console.log('[DEBUG] Starting Scroll Capture Loop with Region:', { x, y, width, height })
@@ -222,11 +226,10 @@ export class CaptureManager {
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
 
     const captures: string[] = []
-    const SCROLL_AMOUNT = Math.floor(height * 0.8) // Used for stitching prediction
+    // const _SCROLL_AMOUNT = Math.floor(height * 0.8) // Used for stitching prediction
     const MAX_SCROLLS = 20
     // Note: scrollScriptPath variable removed as we switched to keypress
 
-      
     const clickScriptPath = is.dev
       ? path.join(__dirname, '../../src/main/scripts/click.swift')
       : path.join(process.resourcesPath, 'src/main/scripts/click.swift')
@@ -238,14 +241,14 @@ export class CaptureManager {
     // 0. Hide the ENTIRE App to force focus switch to the underlying window (Browser)
     // This is more reliable than just hiding the window + clicking
     if (process.platform === 'darwin') {
-        app.hide()
+      app.hide()
     } else {
-        if (this.captureWindow) this.captureWindow.hide()
+      if (this.captureWindow) this.captureWindow.hide()
     }
 
     // Wait for App to hide and OS to switch focus
-    await new Promise(r => setTimeout(r, 800))
-    
+    await new Promise((r) => setTimeout(r, 800))
+
     // Calculate Coordinates (Moved outside try block to fix scope)
     const displayBounds = this.currentDisplayBounds || screen.getPrimaryDisplay().bounds
     const globalX = displayBounds.x + x
@@ -255,112 +258,113 @@ export class CaptureManager {
 
     // (Optional) We could still Click to be safe, but app.hide() should usually work.
     try {
-        execSync(`swift "${clickScriptPath}" ${centerX} ${centerY}`)
-        await new Promise(r => setTimeout(r, 300))
-    } catch (e) { 
-        console.error('Focus click failed', e)
+      execSync(`swift "${clickScriptPath}" ${centerX} ${centerY}`)
+      await new Promise((r) => setTimeout(r, 300))
+    } catch (e) {
+      console.error('Focus click failed', e)
     }
 
     // 1. Initial Capture
-    let isScrolling = true
+    const isScrolling = true
     let scrollCount = 0
     // MAX_SCROLLS already defined above
-    
+
     let isAborted = false
-    
+
     // Register ESCAPE shortcut to stop scrolling
     try {
-        globalShortcut.register('Escape', () => {
-            console.log('[DEBUG] Escape pressed! Aborting scroll capture...')
-            isAborted = true
-        })
+      globalShortcut.register('Escape', () => {
+        console.log('[DEBUG] Escape pressed! Aborting scroll capture...')
+        isAborted = true
+      })
     } catch (e) {
-        console.error('Failed to register Escape shortcut', e)
+      console.error('Failed to register Escape shortcut', e)
     }
 
     try {
       while (isScrolling && scrollCount < MAX_SCROLLS) {
         if (isAborted) {
-            console.log('[DEBUG] Capture aborted by user.')
-            break
-        }
-        
-        console.log(`[DEBUG] Scroll Iteration ${scrollCount + 1}/${MAX_SCROLLS}`)
-      const filename = `scroll-part-${scrollCount}-${Date.now()}.png`
-      const filePath = path.join(tempDir, filename)
-
-      // Use the specific region coordinates passed in (User Selected Region)
-      // Note: globalX/Y are already calculated above
-      
-      const cmd = `screencapture -x -R${Math.round(globalX)},${Math.round(globalY)},${Math.round(width)},${Math.round(height)} -t png "${filePath}"`
-      execSync(cmd)
-
-      if (fs.existsSync(filePath)) {
-        captures.push(filePath)
-      } else {
-        console.error('Failed to capture part', scrollCount)
-        break
-      }
-
-      // Check if we should continue (Compare with previous to detect bottom)
-      if (scrollCount > 0) {
-        const prevFile = captures[scrollCount - 1]
-        const currFile = captures[scrollCount]
-        
-        // Simple duplicate detection
-        const buf1 = fs.readFileSync(prevFile)
-        const buf2 = fs.readFileSync(currFile)
-        if (buf1.equals(buf2)) {
-          console.log('Reached bottom (identical images)')
-          captures.pop() // Remove duplicate
+          console.log('[DEBUG] Capture aborted by user.')
           break
         }
+
+        console.log(`[DEBUG] Scroll Iteration ${scrollCount + 1}/${MAX_SCROLLS}`)
+        const filename = `scroll-part-${scrollCount}-${Date.now()}.png`
+        const filePath = path.join(tempDir, filename)
+
+        // Use the specific region coordinates passed in (User Selected Region)
+        // Note: globalX/Y are already calculated above
+
+        const cmd = `screencapture -x -R${Math.round(globalX)},${Math.round(globalY)},${Math.round(width)},${Math.round(height)} -t png "${filePath}"`
+        execSync(cmd)
+
+        if (fs.existsSync(filePath)) {
+          captures.push(filePath)
+        } else {
+          console.error('Failed to capture part', scrollCount)
+          break
+        }
+
+        // Check if we should continue (Compare with previous to detect bottom)
+        if (scrollCount > 0) {
+          const prevFile = captures[scrollCount - 1]
+          const currFile = captures[scrollCount]
+
+          // Simple duplicate detection
+          const buf1 = fs.readFileSync(prevFile)
+          const buf2 = fs.readFileSync(currFile)
+          if (buf1.equals(buf2)) {
+            console.log('Reached bottom (identical images)')
+            captures.pop() // Remove duplicate
+            break
+          }
+        }
+
+        // Scroll (using Keyboard ArrowDown x10 - Matches successful standalone test)
+        console.log(`Scrolling down (Arrow Down x10)...`)
+        const kVK_DownArrow = 125
+        const scrollRepeats = 10
+        try {
+          execSync(`swift "${keypressScriptPath}" ${scrollRepeats} ${kVK_DownArrow}`)
+        } catch (e) {
+          console.error('Scroll script failed', e)
+        }
+
+        // Wait for scroll + animation + render
+        // Using Arrow Down is slower/smoother, so we wait accordingly
+        await new Promise((r) => setTimeout(r, 1500))
+
+        scrollCount++
       }
 
-      // Scroll (using Keyboard ArrowDown x10 - Matches successful standalone test)
-      console.log(`Scrolling down (Arrow Down x10)...`)
-      const kVK_DownArrow = 125
-      const scrollRepeats = 10
-      try {
-        execSync(`swift "${keypressScriptPath}" ${scrollRepeats} ${kVK_DownArrow}`)
-      } catch (e) {
-        console.error('Scroll script failed', e)
-      }
-
-      // Wait for scroll + animation + render
-      // Using Arrow Down is slower/smoother, so we wait accordingly
-      await new Promise(r => setTimeout(r, 1500))
-      
-      scrollCount++
-    }
-
-    // Stitching
-    await this.stitchImages(captures, width, height)
-    
+      // Stitching
+      await this.stitchImages(captures, width)
     } finally {
-        // CLEANUP: Always unregister the shortcut
-        globalShortcut.unregister('Escape')
-        console.log('[DEBUG] Unregistered Escape shortcut')
+      // CLEANUP: Always unregister the shortcut
+      globalShortcut.unregister('Escape')
+      console.log('[DEBUG] Unregistered Escape shortcut')
     }
   }
 
-  private async stitchImages(files: string[], width: number, height: number) {
+  private async stitchImages(files: string[], width: number): Promise<void> {
     if (files.length === 0) return
 
     try {
       console.log('Stitching images with Smart Stitching...', files.length)
 
       // 1. Load all images and get metadata
-      const images = await Promise.all(files.map(async (f) => {
-        const img = sharp(f)
-        const meta = await img.metadata()
-        const buffer = await img.ensureAlpha().raw().toBuffer({ resolveWithObject: true })
-        return { file: f, img, meta, buffer }
-      }))
+      const images = await Promise.all(
+        files.map(async (f) => {
+          const img = sharp(f)
+          const meta = await img.metadata()
+          const buffer = await img.ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+          return { file: f, img, meta, buffer }
+        })
+      )
 
       if (images.length === 0) return
 
-      const composites: { input: string, top: number, left: number }[] = []
+      const composites: { input: string; top: number; left: number }[] = []
       let currentY = 0
       const actualWidth = images[0].meta.width || width
       // const actualHeight = images[0].meta.height || height // Each image might differ slightly if cropped, though unlikely in this loop
@@ -387,10 +391,10 @@ export class CaptureManager {
         // Top should be: (Previous Top + Previous Height) - Overlap
         // But since we are accumulating, 'currentY' tracks the bottom of the composite so far.
         // So new Top = currentY - Overlap.
-        
+
         const effectiveOverlap = overlap > 0 ? overlap : 0
         const top = currentY - effectiveOverlap
-        
+
         composites.push({
           input: curr.file,
           top: top,
@@ -403,7 +407,7 @@ export class CaptureManager {
 
       const finalHeight = currentY
       const outputPath = path.join(app.getPath('userData'), `capture-long-${Date.now()}.png`)
-      
+
       console.log(`[DEBUG] Final Stitch Dimensions: ${actualWidth}x${finalHeight}`)
 
       // 3. Render final composite
@@ -416,103 +420,118 @@ export class CaptureManager {
         },
         limitInputPixels: false // Correct way to disable limit
       })
-      .composite(composites)
-      .png()
-      .toFile(outputPath)
-      
-      // Add to DB
-       this.dbManager.addCapture({
-          filePath: outputPath,
-          thumbPath: outputPath,
-          sourceTitle: 'Scroll Capture',
-          width: actualWidth,
-          height: finalHeight
-        })
+        .composite(composites)
+        .png()
+        .toFile(outputPath)
 
-        const allWindows = BrowserWindow.getAllWindows()
-        const mainWindow = allWindows.find((w) => w !== this.captureWindow)
-      
+      // Add to DB
+      this.dbManager.addCapture({
+        filePath: outputPath,
+        thumbPath: outputPath,
+        sourceTitle: 'Scroll Capture',
+        width: actualWidth,
+        height: finalHeight
+      })
+
+      const allWindows = BrowserWindow.getAllWindows()
+      const mainWindow = allWindows.find((w) => w !== this.captureWindow)
+
       // Restore App Visibility
       if (process.platform === 'darwin') {
-          app.show()
+        app.show()
       }
-      if (this.captureWindow) this.captureWindow.hide() 
+      if (this.captureWindow) this.captureWindow.hide()
       if (mainWindow) {
-          mainWindow.show()
-          mainWindow.focus()
+        mainWindow.show()
+        mainWindow.focus()
       }
-      
-      mainWindow?.webContents.send('capture-saved')
 
+      mainWindow?.webContents.send('capture-saved')
     } catch (e) {
       console.error('Stitching failed', e)
     }
   }
 
   // A helper to find how many pixels of 'curr' (top) match 'prev' (bottom)
-  private findOverlap(prev: { data: Buffer, info: sharp.OutputInfo }, curr: { data: Buffer, info: sharp.OutputInfo }, width: number): number {
-      const prevData = prev.data
-      const currData = curr.data
-      const prevHeight = prev.info.height
-      
-      // We assume overlap is at least 10% and at most 90% of screen to save efficiency? 
-      // Or just search widely. Let's strictly search the bottom 60% of prev image.
-      const searchStartRow = Math.floor(prevHeight * 0.4) 
+  private findOverlap(
+    prev: { data: Buffer; info: sharp.OutputInfo },
+    curr: { data: Buffer; info: sharp.OutputInfo },
+    width: number
+  ): number {
+    const prevData = prev.data
+    const currData = curr.data
+    const prevHeight = prev.info.height
 
-      // We'll compare a horizontal strip (center 50% width) to avoid scrollbars/edge artifacts
-      const startX = Math.floor(width * 0.25)
-      const endX = Math.floor(width * 0.75)
+    // We assume overlap is at least 10% and at most 90% of screen to save efficiency?
+    // Or just search widely. Let's strictly search the bottom 60% of prev image.
+    const searchStartRow = Math.floor(prevHeight * 0.4)
 
-      // Iterate backwards from the bottom of 'prev' to find where 'curr' top might start
-      // Actually, standard way: Iterate 'y' in 'prev' representing the start of the overlap.
-      // So if y=100 in prev matches y=0 in curr, then overlap is prevHeight - 100.
-      
-      for (let y = searchStartRow; y < prevHeight; y++) {
-          // Check if row 'y' in prev matches row '0' in curr
-          if (this.compareRows(prevData, y, currData, 0, width, startX, endX)) {
-              // Potential match found!
-              // Verify with a few more rows to be sure (e.g. check next 10 rows)
-              let confirmed = true
-              const checkDepth = Math.min(20, prevHeight - y) // check up to 20 rows
-              
-              for (let offset = 1; offset < checkDepth; offset++) {
-                  if (!this.compareRows(prevData, y + offset, currData, offset, width, startX, endX)) {
-                      confirmed = false
-                      break
-                  }
-              }
+    // We'll compare a horizontal strip (center 50% width) to avoid scrollbars/edge artifacts
+    const startX = Math.floor(width * 0.25)
+    const endX = Math.floor(width * 0.75)
 
-              if (confirmed) {
-                  return prevHeight - y
-              }
+    // Iterate backwards from the bottom of 'prev' to find where 'curr' top might start
+    // Actually, standard way: Iterate 'y' in 'prev' representing the start of the overlap.
+    // So if y=100 in prev matches y=0 in curr, then overlap is prevHeight - 100.
+
+    for (let y = searchStartRow; y < prevHeight; y++) {
+      // Check if row 'y' in prev matches row '0' in curr
+      if (this.compareRows(prevData, y, currData, 0, width, startX, endX)) {
+        // Potential match found!
+        // Verify with a few more rows to be sure (e.g. check next 10 rows)
+        let confirmed = true
+        const checkDepth = Math.min(20, prevHeight - y) // check up to 20 rows
+
+        for (let offset = 1; offset < checkDepth; offset++) {
+          if (!this.compareRows(prevData, y + offset, currData, offset, width, startX, endX)) {
+            confirmed = false
+            break
           }
-      }
+        }
 
-      return 0 // No overlap found
+        if (confirmed) {
+          return prevHeight - y
+        }
+      }
+    }
+
+    return 0 // No overlap found
   }
 
-  private compareRows(buf1: Buffer, y1: number, buf2: Buffer, y2: number, width: number, startX: number, endX: number): boolean {
-      const idx1Base = y1 * width * 4
-      const idx2Base = y2 * width * 4
-      
-      // Allow slight noise tolerance? exact match is safer for screenshots unless lossy compression happened (it shouldn't in memory/png)
-      // Electron screens are usually exact.
-      
-      for (let x = startX; x < endX; x += 4) { // stride 4 pixels for speed
-          const idx1 = idx1Base + x * 4
-          const idx2 = idx2Base + x * 4
-          
-          if (buf1[idx1] !== buf2[idx2] ||         // R
-              buf1[idx1 + 1] !== buf2[idx2 + 1] || // G
-              buf1[idx1 + 2] !== buf2[idx2 + 2]) { // B
-              // We ignore Alpha usually, or check it too. 
-              return false
-          }
+  private compareRows(
+    buf1: Buffer,
+    y1: number,
+    buf2: Buffer,
+    y2: number,
+    width: number,
+    startX: number,
+    endX: number
+  ): boolean {
+    const idx1Base = y1 * width * 4
+    const idx2Base = y2 * width * 4
+
+    // Allow slight noise tolerance? exact match is safer for screenshots unless lossy compression happened (it shouldn't in memory/png)
+    // Electron screens are usually exact.
+
+    for (let x = startX; x < endX; x += 4) {
+      // stride 4 pixels for speed
+      const idx1 = idx1Base + x * 4
+      const idx2 = idx2Base + x * 4
+
+      if (
+        buf1[idx1] !== buf2[idx2] || // R
+        buf1[idx1 + 1] !== buf2[idx2 + 1] || // G
+        buf1[idx1 + 2] !== buf2[idx2 + 2]
+      ) {
+        // B
+        // We ignore Alpha usually, or check it too.
+        return false
       }
-      return true
+    }
+    return true
   }
 
-  private async processCapture(x: number, y: number, width: number, height: number) {
+  private async processCapture(x: number, y: number, width: number, height: number): Promise<void> {
     console.log(`[DEBUG] Processing capture: x=${x}, y=${y}, w=${width}, h=${height}`)
 
     try {
@@ -522,7 +541,7 @@ export class CaptureManager {
       }
 
       // 2. Wait a tiny bit for window to hide (Electron is usually fast, but 50ms safety)
-      await new Promise(r => setTimeout(r, 50))
+      await new Promise((r) => setTimeout(r, 50))
 
       // 3. Take the screenshot of the SELECTED REGION
       const displayBounds = this.currentDisplayBounds || screen.getPrimaryDisplay().bounds
@@ -542,7 +561,7 @@ export class CaptureManager {
 
       // Use native screencapture CLI
       const cmd = `screencapture -x -R${Math.round(globalX)},${Math.round(globalY)},${Math.round(width)},${Math.round(height)} -t png "${filePath}"`
-      
+
       console.log('[DEBUG] Executing capture cmd:', cmd)
       execSync(cmd)
 
@@ -562,17 +581,16 @@ export class CaptureManager {
         const allWindows = BrowserWindow.getAllWindows()
         console.log('[DEBUG] All Windows Count:', allWindows.length)
         const mainWindow = allWindows.find((w) => w !== this.captureWindow) // strict inequality check
-        
+
         if (mainWindow) {
-            console.log('[DEBUG] Finding Main Window SUCCESS. Sending event...')
-            mainWindow.webContents.send('capture-saved')
+          console.log('[DEBUG] Finding Main Window SUCCESS. Sending event...')
+          mainWindow.webContents.send('capture-saved')
         } else {
-            console.error('[DEBUG] Main Window NOT FOUND')
+          console.error('[DEBUG] Main Window NOT FOUND')
         }
       } else {
         console.error('[DEBUG] Capture failed: file not created at', filePath)
       }
-
     } catch (e) {
       console.error('[DEBUG] Error processing capture:', e)
     }

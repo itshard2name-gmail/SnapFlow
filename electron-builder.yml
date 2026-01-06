@@ -16,8 +16,8 @@ mac:
     - from: resources/window-utils
       to: window-utils
   extendInfo:
-    NSCameraUsageDescription: "Scope requires access to the camera for screen recording."
-    NSMicrophoneUsageDescription: "Scope requires access to the microphone for audio recording."
+    NSCameraUsageDescription: 'Scope requires access to the camera for screen recording.'
+    NSMicrophoneUsageDescription: 'Scope requires access to the microphone for audio recording.'
 dmg:
   artifactName: ${productName}-${version}.${ext}
 win:

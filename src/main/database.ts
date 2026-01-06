@@ -14,7 +14,7 @@ export class DatabaseManager {
     this.init()
   }
 
-  private init() {
+  private init(): void {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS captures (
         id TEXT PRIMARY KEY,

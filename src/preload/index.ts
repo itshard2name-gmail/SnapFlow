@@ -6,18 +6,20 @@ const api = {
   getAllCaptures: () => ipcRenderer.invoke('get-all-captures'),
   deleteCapture: (id: string) => ipcRenderer.invoke('delete-capture', id),
   mockAddCapture: () => ipcRenderer.invoke('mock-add-capture'),
-  confirmCapture: (data: any) => ipcRenderer.invoke('capture-confirmed', data),
+  confirmCapture: (data: unknown) => ipcRenderer.invoke('capture-confirmed', data),
   cancelCapture: () => ipcRenderer.invoke('capture-cancelled'),
-  onCaptureSource: (callback: (source: any) => void) => {
+  onCaptureSource: (callback: (source: unknown) => void) => {
     ipcRenderer.on('capture-source', (_, source) => callback(source))
   },
   openPath: (path: string) => ipcRenderer.invoke('open-path', path),
   getOpenWindows: () => ipcRenderer.invoke('get-open-windows'),
   captureWindow: (id: number, sourceTitle: string) =>
     ipcRenderer.invoke('capture-window', { id, sourceTitle }),
-  copyImageToClipboard: (filePath: string) => ipcRenderer.invoke('copy-image-to-clipboard', filePath),
-  toggleAutoLaunch: (enabled: boolean) => ipcRenderer.invoke('settings:toggle-auto-launch', enabled),
-  log: (msg: any) => ipcRenderer.send('log', msg)
+  copyImageToClipboard: (filePath: string) =>
+    ipcRenderer.invoke('copy-image-to-clipboard', filePath),
+  toggleAutoLaunch: (enabled: boolean) =>
+    ipcRenderer.invoke('settings:toggle-auto-launch', enabled),
+  log: (msg: unknown) => ipcRenderer.send('log', msg)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

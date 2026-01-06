@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, ReactElement } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { CaptureCard } from './components/CaptureCard'
 import { PreviewPanel } from './components/PreviewPanel'
@@ -6,12 +6,12 @@ import { CaptureOverlay } from './components/CaptureOverlay'
 import { Lightbox } from './components/Lightbox'
 import { Capture } from '../../shared/types'
 
-function App() {
+function App(): ReactElement {
   const [captures, setCaptures] = useState<Capture[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [lightboxCaptureId, setLightboxCaptureId] = useState<string | null>(null)
 
-  const fetchCaptures = async () => {
+  const fetchCaptures = useCallback(async (): Promise<void> => {
     try {
       // @ts-ignore: window.api is exposed via preload script
       const data = await window.api.getAllCaptures()
@@ -19,9 +19,10 @@ function App() {
     } catch (error) {
       console.error('Failed to fetch captures:', error)
     }
-  }
+  }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCaptures()
 
     // Listen for new captures from main process
@@ -30,12 +31,12 @@ function App() {
       fetchCaptures()
     })
 
-    return () => {
+    return (): void => {
       removeListener()
     }
-  }, [])
+  }, [fetchCaptures])
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string): Promise<void> => {
     try {
       // @ts-ignore: window.api is exposed via preload script
       await window.api.deleteCapture(id)
@@ -47,7 +48,7 @@ function App() {
   }
 
   // Handle external file opening
-  const handleOpenExternal = async (filePath: string) => {
+  const handleOpenExternal = async (filePath: string): Promise<void> => {
     // @ts-ignore: window.api is exposed via preload script
     await window.api.openPath(filePath)
   }
@@ -56,12 +57,12 @@ function App() {
   const currentLightboxIndex = captures.findIndex((c) => c.id === lightboxCaptureId)
   const lightboxCapture = captures[currentLightboxIndex]
 
-  const handleNext = () => {
+  const handleNext = (): void => {
     const nextIndex = (currentLightboxIndex + 1) % captures.length
     setLightboxCaptureId(captures[nextIndex]?.id || null)
   }
 
-  const handlePrev = () => {
+  const handlePrev = (): void => {
     const prevIndex = (currentLightboxIndex - 1 + captures.length) % captures.length
     setLightboxCaptureId(captures[prevIndex]?.id || null)
   }
@@ -79,11 +80,11 @@ function App() {
     return (
       <CaptureOverlay
         mode={mode as 'region' | 'window' | 'scroll'}
-        onConfirm={(rect) => {
+        onConfirm={(rect): void => {
           // @ts-ignore: window.api is exposed via preload script
           window.api.confirmCapture({ ...rect, sourceId: 'primary' })
         }}
-        onCancel={() => {
+        onCancel={(): void => {
           // @ts-ignore: window.api is exposed via preload script
           window.api.cancelCapture()
         }}
@@ -119,10 +120,10 @@ function App() {
                   key={capture.id}
                   capture={capture}
                   isSelected={capture.id === selectedId}
-                  onClick={() => setSelectedId(capture.id)}
-                  onDoubleClick={() => setLightboxCaptureId(capture.id)}
+                  onClick={(): void => setSelectedId(capture.id)}
+                  onDoubleClick={(): void => setLightboxCaptureId(capture.id)}
                   onDelete={handleDelete}
-                  onPreview={() => setLightboxCaptureId(capture.id)}
+                  onPreview={(): void => setLightboxCaptureId(capture.id)}
                 />
               ))}
             </div>
@@ -137,10 +138,12 @@ function App() {
         <Lightbox
           imageSrc={`media://${lightboxCapture.filePath}`}
           title={lightboxCapture.sourceTitle}
-          onClose={() => setLightboxCaptureId(null)}
+          onClose={(): void => setLightboxCaptureId(null)}
           onNext={handleNext}
           onPrev={handlePrev}
-          onOpenExternal={() => handleOpenExternal(lightboxCapture.filePath)}
+          onOpenExternal={(): void => {
+            handleOpenExternal(lightboxCapture.filePath)
+          }}
         />
       )}
     </div>

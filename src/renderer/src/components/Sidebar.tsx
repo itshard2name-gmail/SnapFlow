@@ -1,8 +1,10 @@
+import { ReactElement } from 'react'
+
 interface SidebarProps {
   onRefresh: () => void
 }
 
-export function Sidebar({ onRefresh }: SidebarProps) {
+export function Sidebar({ onRefresh }: SidebarProps): ReactElement {
   return (
     <div className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col p-4">
       <div className="flex items-center gap-3 mb-8 px-2">

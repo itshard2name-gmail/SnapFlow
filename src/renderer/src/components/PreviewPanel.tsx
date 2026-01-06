@@ -1,3 +1,4 @@
+import { ReactElement } from 'react'
 import { Capture } from '../../../shared/types'
 
 interface PreviewPanelProps {
@@ -5,7 +6,7 @@ interface PreviewPanelProps {
   onDelete: (id: string) => void
 }
 
-export function PreviewPanel({ capture, onDelete }: PreviewPanelProps) {
+export function PreviewPanel({ capture, onDelete }: PreviewPanelProps): ReactElement {
   if (!capture) {
     return (
       <div className="w-80 bg-slate-900 border-l border-slate-800 flex items-center justify-center p-6 text-center">
@@ -78,7 +79,7 @@ export function PreviewPanel({ capture, onDelete }: PreviewPanelProps) {
               className="block text-xs text-slate-400 mt-1 bg-slate-950 p-2 rounded border border-slate-800 break-all cursor-pointer hover:text-blue-400 hover:border-blue-900 transition-colors"
               onClick={(e) => {
                 e.stopPropagation()
-                // @ts-ignore
+                // @ts-ignore: window.api is exposed via preload script
                 window.api.openPath(capture.filePath)
               }}
               title="Click to open"
@@ -91,7 +92,7 @@ export function PreviewPanel({ capture, onDelete }: PreviewPanelProps) {
 
       <div className="p-4 border-t border-slate-800 bg-slate-900 flex gap-2">
         <button
-          // @ts-ignore
+          // @ts-ignore: window.api is exposed via preload script
           onClick={() => window.api.openPath(capture.filePath)}
           className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-medium transition-colors border border-slate-700 hover:border-slate-600"
         >

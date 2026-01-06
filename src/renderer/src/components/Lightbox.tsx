@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, ReactElement } from 'react'
 
 interface LightboxProps {
   imageSrc: string
@@ -16,7 +16,7 @@ export function Lightbox({
   onPrev,
   onOpenExternal,
   title
-}: LightboxProps) {
+}: LightboxProps): ReactElement {
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {

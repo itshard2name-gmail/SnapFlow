@@ -1,5 +1,18 @@
-import { app, shell, BrowserWindow, ipcMain, globalShortcut, clipboard, nativeImage, Tray, Menu, systemPreferences } from 'electron'
-import { join } from 'path'
+import {
+  app,
+  shell,
+  BrowserWindow,
+  ipcMain,
+  globalShortcut,
+  clipboard,
+  nativeImage,
+  Tray,
+  Menu,
+  systemPreferences,
+  protocol,
+  net
+} from 'electron'
+import path, { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { DatabaseManager } from './database'
 import { CaptureManager } from './capture'
@@ -7,6 +20,7 @@ import { getOpenWindows } from './window-utils'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import fs from 'fs'
+import { pathToFileURL } from 'url'
 
 const execPromise = promisify(exec)
 
@@ -73,7 +87,7 @@ function createWindow(): void {
 }
 
 // Register privileged schemes before app is ready
-const { protocol, net } = require('electron')
+// const { protocol, net } = require('electron')
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'media',
@@ -151,7 +165,7 @@ app.whenReady().then(() => {
 
       // Use net.fetch with file:// protocol
       // pathToFileURL handles encoding safe characters for us
-      const { pathToFileURL } = require('url')
+      // const { pathToFileURL } = require('url')
       const fileUrl = pathToFileURL(filePath).toString()
 
       console.log('Fetching:', fileUrl)
@@ -167,8 +181,8 @@ app.whenReady().then(() => {
 
   ipcMain.handle('mock-add-capture', () => {
     // Mock logic: Create a dummy file in userData and add to DB
-    const fs = require('fs')
-    const path = require('path')
+    // const fs = require('fs')
+    // const path = require('path')
     const destPath = path.join(app.getPath('userData'), `mock-${Date.now()}.png`)
 
     // Create a simple colored SVG as a placeholder image
@@ -195,9 +209,9 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     // MODIFIED: explicitly check mainWindow existence for our "Hide-on-Close" logic
     if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.show()
+      mainWindow.show()
     } else {
-        createWindow()
+      createWindow()
     }
   })
 })
@@ -286,11 +300,11 @@ ipcMain.handle('delete-capture', (_, id: string) => {
         fs.unlinkSync(capture.filePath)
         console.log('Deleted file:', capture.filePath)
       }
-      
+
       // Delete the thumbnail if it's a different file
       if (
-        capture.thumbPath && 
-        capture.thumbPath !== capture.filePath && 
+        capture.thumbPath &&
+        capture.thumbPath !== capture.filePath &&
         fs.existsSync(capture.thumbPath)
       ) {
         fs.unlinkSync(capture.thumbPath)
@@ -299,7 +313,7 @@ ipcMain.handle('delete-capture', (_, id: string) => {
     } catch (error) {
       console.error('Error deleting capture files:', error)
     }
-    
+
     // Always remove from DB to keep UI in sync
     dbManager.deleteCapture(id)
   }
