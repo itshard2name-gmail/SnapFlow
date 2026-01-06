@@ -178,11 +178,19 @@ ipcMain.handle('capture-window', async (_, { id, sourceTitle }: { id: number, so
   const tempPath = join(app.getPath('userData'), `temp-${Date.now()}.png`)
   const finalPath = join(app.getPath('userData'), `capture-${Date.now()}.png`)
   
+  // Play shutter sound immediately (macOS only)
+  if (process.platform === 'darwin') {
+    const soundPath = '/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Grab.aif'
+    exec(`afplay "${soundPath}"`, (error) => {
+      if (error) console.error('Failed to play shutter sound:', error)
+    })
+  }
+  
   try {
     // screencapture -x (no sound) -l <windowId> <path>
     // Note: -o (no shadow) is optional, user didn't specify, but often preferred for clean 'window' captures. 
     // Plan said: -x -l [windowID].
-    await execPromise(`screencapture -x -l ${id} "${tempPath}"`)
+    await execPromise(`screencapture -x -o -l ${id} "${tempPath}"`)
     
     // Check if file created
     if (fs.existsSync(tempPath)) {
