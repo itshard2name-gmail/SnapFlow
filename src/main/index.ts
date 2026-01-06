@@ -154,8 +154,8 @@ import { DatabaseManager } from './database'
 import { CaptureManager } from './capture'
 
 const dbManager = new DatabaseManager()
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const captureManager = new CaptureManager(dbManager)
+
+new CaptureManager(dbManager)
 
 ipcMain.handle('get-all-captures', () => {
   return dbManager.getAllCaptures()

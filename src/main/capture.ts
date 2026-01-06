@@ -1,7 +1,6 @@
 import {
   BrowserWindow,
   screen,
-  desktopCapturer,
   ipcMain,
   globalShortcut,
   app,
@@ -9,7 +8,7 @@ import {
 } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { execSync } from 'child_process'
+import { execSync, exec } from 'child_process'
 import * as fs from 'fs'
 import path from 'path'
 import { DatabaseManager } from './database'
@@ -36,6 +35,15 @@ export class CaptureManager {
 
   private registerIPC() {
     ipcMain.handle('capture-confirmed', async (_, { x, y, width, height }) => {
+      // Play shutter sound immediately (macOS only)
+      // Placed here for lowest possible latency in Main process
+      if (process.platform === 'darwin') {
+        const soundPath = '/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Grab.aif'
+        exec(`afplay "${soundPath}"`, (error) => {
+          if (error) console.error('Failed to play shutter sound:', error)
+        })
+      }
+
       try {
         await this.processCapture(x, y, width, height)
         this.closeCaptureWindow()
@@ -75,6 +83,7 @@ export class CaptureManager {
       focusable: true, // Keep true to allow keyboard events (Esc)
       hasShadow: false,
       enableLargerThanScreen: true,
+      show: false, // Fix: Do not show immediately to prevent focus stealing before capture
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
         sandbox: false,
@@ -86,7 +95,7 @@ export class CaptureManager {
     // Step 2: Force Open DevTools for Capture Window
     // this.captureWindow.webContents.openDevTools({ mode: 'detach' })
 
-    this.captureWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    this.captureWindow.webContents.on('did-fail-load', (_, errorCode, errorDescription) => {
       console.error('CaptureWindow failed to load:', errorCode, errorDescription)
     })
 
@@ -171,6 +180,8 @@ export class CaptureManager {
 
   private async processCapture(x: number, y: number, width: number, height: number) {
     console.log(`Processing capture: x=${x}, y=${y}, w=${width}, h=${height}`)
+
+
 
     try {
       if (!this.currentCapturePath || !fs.existsSync(this.currentCapturePath)) {

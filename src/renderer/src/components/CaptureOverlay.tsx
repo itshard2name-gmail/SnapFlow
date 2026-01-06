@@ -183,6 +183,9 @@ export function CaptureOverlay({ onConfirm, onCancel }: CaptureOverlayProps) {
     setIsSelecting(false)
     const rect = getRect()
     if (rect.width > 5 && rect.height > 5) {
+      // Play shutter sound immediately for zero latency
+      // Uses the custom media protocol to access the system sound
+
       onConfirm({ ...rect })
     } else {
       // Reset if too small
