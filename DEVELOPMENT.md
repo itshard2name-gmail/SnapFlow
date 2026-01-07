@@ -42,3 +42,11 @@ npm run typecheck && npm run lint
 
 - Update `system_design.md` if architectural changes are made.
 - Keep `task.md` updated with your progress.
+
+## 6. Handling Static Assets
+
+- **Implicit Dependencies:** Files not imported in JS (e.g., Swift scripts, binaries) are NOT bundled by default.
+- **Rule:** If you add a new external script:
+  1. Add it to `src/main/scripts/` (or appropriate dir).
+  2. **MUST** update `electron-builder.yml` -> `extraResources` to ensure it's copied to the production bundle.
+  3. Update `capture.ts` (or consumer) to correctly resolve the path in both Dev (`__dirname`) and Prod (`process.resourcesPath`).

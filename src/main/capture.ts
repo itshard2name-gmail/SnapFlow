@@ -15,10 +15,31 @@ export class CaptureManager {
 
   constructor(dbManager: DatabaseManager) {
     this.dbManager = dbManager
+    this.verifyExternalResources()
     app.whenReady().then(() => {
       this.registerShortcuts()
     })
     this.registerIPC()
+  }
+
+  private verifyExternalResources(): void {
+    const scripts = ['click.swift', 'keypress.swift']
+    const baseDir = is.dev
+      ? path.join(__dirname, '../../src/main/scripts')
+      : path.join(process.resourcesPath, 'scripts')
+
+    scripts.forEach((script) => {
+      const scriptPath = path.join(baseDir, script)
+      if (!fs.existsSync(scriptPath)) {
+        console.error(`[CRITICAL] Missing external resource: ${scriptPath}`)
+        if (!is.dev) {
+          // In production, this is a fatal error
+          // We can't use dialog here easily before ready, but we should log loud
+        }
+      } else {
+        console.log(`[OK] Found resource: ${script}`)
+      }
+    })
   }
 
   private registerShortcuts(): void {
@@ -190,11 +211,11 @@ export class CaptureManager {
 
     const clickScriptPath = is.dev
       ? path.join(__dirname, '../../src/main/scripts/click.swift')
-      : path.join(process.resourcesPath, 'src/main/scripts/click.swift')
+      : path.join(process.resourcesPath, 'scripts/click.swift')
 
     const keypressScriptPath = is.dev
       ? path.join(__dirname, '../../src/main/scripts/keypress.swift')
-      : path.join(process.resourcesPath, 'src/main/scripts/keypress.swift')
+      : path.join(process.resourcesPath, 'scripts/keypress.swift')
 
     // Hide app
     if (process.platform === 'darwin') {
