@@ -12,7 +12,14 @@ interface WindowInfo {
 
 interface CaptureOverlayProps {
   mode: 'region' | 'window' | 'scroll'
-  onConfirm: (coords: { x: number; y: number; width: number; height: number }) => void
+  onConfirm: (coords: {
+    x: number
+    y: number
+    width: number
+    height: number
+    id?: number
+    sourceTitle?: string
+  }) => void
   onCancel: () => void
 }
 
@@ -51,8 +58,12 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     }
   }, [mode, activeWindow, startPos, currentPos])
 
+  // STABLE DRAW FUNCTION: Removed activeWindow dependency
   const draw = useCallback(
-    (rect: { x: number; y: number; width: number; height: number } | null): void => {
+    (
+      rect: { x: number; y: number; width: number; height: number } | null,
+      labelOverride?: string
+    ): void => {
       const canvas = canvasRef.current
       if (!canvas) return
 
@@ -67,7 +78,7 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
       ctx.clearRect(0, 0, logicalWidth, logicalHeight)
 
       // 2. Fill with semi-transparent dim mask
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)' // Slightly darker for better contrast
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
       ctx.fillRect(0, 0, logicalWidth, logicalHeight)
 
       if (rect && rect.width > 0 && rect.height > 0) {
@@ -79,14 +90,11 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
         ctx.restore()
 
         // 4. Draw border around the hole
-        // In window mode, use a different color (e.g. green or same blue)
-        // Scroll mode gets Purple (#8b5cf6), Window mode gets Green (#10b981), Region gets Blue (#3b82f6)
         ctx.strokeStyle = mode === 'scroll' ? '#8b5cf6' : mode === 'window' ? '#10b981' : '#3b82f6'
         ctx.lineWidth = 2
         ctx.strokeRect(rect.x, rect.y, rect.width, rect.height)
 
         // 5. Draw Dimensions tooltip
-        // Position appropriately
         const labelY = rect.y - 25 < 0 ? rect.y + rect.height + 5 : rect.y - 25
 
         ctx.fillStyle = '#1e293b'
@@ -95,15 +103,15 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
         ctx.font = '12px sans-serif'
 
         const label =
-          mode === 'window' && activeWindow
-            ? `${activeWindow.app}` // Show App Name
-            : // Scroll or Region
-              `${mode === 'scroll' ? 'Scroll Region: ' : ''}${rect.width} x ${rect.height}`
+          labelOverride ||
+          (mode === 'scroll'
+            ? `Scroll Region: ${rect.width} x ${rect.height}`
+            : `${rect.width} x ${rect.height}`)
 
         ctx.fillText(label, rect.x + 5, labelY + 15)
       }
     },
-    [mode, activeWindow]
+    [mode]
   )
 
   useEffect(() => {
@@ -111,27 +119,18 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     const canvas = canvasRef.current
     if (canvas) {
       const dpr = window.devicePixelRatio || 1
-      // Set physical size
       canvas.width = window.innerWidth * dpr
       canvas.height = window.innerHeight * dpr
-
       const ctx = canvas.getContext('2d')
-      if (ctx) {
-        // Scale context to match
-        ctx.scale(dpr, dpr)
-      }
+      if (ctx) ctx.scale(dpr, dpr)
     }
 
-    // Force transparent background for the capture window
     document.documentElement.style.backgroundColor = 'transparent'
     document.body.style.backgroundColor = 'transparent'
-    // Ensure no background image interferes
     document.body.style.backgroundImage = 'none'
 
-    // Initial draw to show the dim mask immediately
     draw(null)
 
-    // Fetch windows only in window mode
     if (mode === 'window') {
       const fetchWindows = async (): Promise<void> => {
         try {
@@ -146,7 +145,6 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
       fetchWindows()
     }
 
-    // Close on Escape
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onCancel()
     }
@@ -155,7 +153,8 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     return (): void => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [mode, draw, onCancel])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, onCancel]) // REMOVED draw from dependencies to fix loop
 
   // Mouse Handlers
   const handleMouseDown = (e: React.MouseEvent): void => {
@@ -164,22 +163,22 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
       `[RENDERER-DEBUG] Mouse Down: mode=${mode} x=${e.nativeEvent.offsetX} y=${e.nativeEvent.offsetY}`
     )
     e.preventDefault()
+
     if (mode === 'window') {
-      // Capture Specific Window
       if (activeWindow) {
-        // Use onConfirm from props which maps to window.api.confirmCapture
-        // We need to pass coordinates relative to the overlay window (which is the current display)
         onConfirm({
           x: activeWindow.x - window.screenX,
           y: activeWindow.y - window.screenY,
           width: activeWindow.width,
-          height: activeWindow.height
+          height: activeWindow.height,
+          // @ts-ignore: Extending the type implicitly for App.tsx to handle
+          id: activeWindow.id,
+          sourceTitle: activeWindow.app || activeWindow.title
         })
       }
       return
     }
 
-    // Region Mode
     setIsSelecting(true)
     const pos = { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY }
     setStartPos(pos)
@@ -191,11 +190,9 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     const pos = { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY }
 
     if (mode === 'window') {
-      // Use Global Screen Coordinates to match against Quartz Window List
       const globalX = e.screenX
       const globalY = e.screenY
 
-      // Find top-most window under cursor in Global Space
       const found = windows.find(
         (w) =>
           globalX >= w.x && globalX <= w.x + w.width && globalY >= w.y && globalY <= w.y + w.height
@@ -203,14 +200,16 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
 
       if (found && found.id !== activeWindow?.id) {
         setActiveWindow(found)
-        // Convert Global Window Frame to Local Canvas Coordinates for Drawing
-        // We subtract the current window's global position to get the relative offset
-        draw({
-          x: found.x - window.screenX,
-          y: found.y - window.screenY,
-          width: found.width,
-          height: found.height
-        })
+        // Pass label directly to stable draw function
+        draw(
+          {
+            x: found.x - window.screenX,
+            y: found.y - window.screenY,
+            width: found.width,
+            height: found.height
+          },
+          found.app
+        )
       } else if (!found && activeWindow) {
         setActiveWindow(null)
         draw(null)

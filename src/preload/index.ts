@@ -3,8 +3,14 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  getAllCaptures: () => ipcRenderer.invoke('get-all-captures'),
+  getAllCaptures: (filter?: 'all' | 'favorites' | 'trash') =>
+    ipcRenderer.invoke('get-all-captures', filter),
   deleteCapture: (id: string) => ipcRenderer.invoke('delete-capture', id),
+  softDeleteCapture: (id: string) => ipcRenderer.invoke('soft-delete-capture', id),
+  restoreCapture: (id: string) => ipcRenderer.invoke('restore-capture', id),
+  toggleFavorite: (id: string) => ipcRenderer.invoke('toggle-favorite', id),
+  emptyTrash: () => ipcRenderer.invoke('empty-trash'),
+  renameCapture: (id: string, title: string) => ipcRenderer.invoke('rename-capture', { id, title }),
   mockAddCapture: () => ipcRenderer.invoke('mock-add-capture'),
   confirmCapture: (data: unknown) => ipcRenderer.invoke('capture-confirmed', data),
   cancelCapture: () => ipcRenderer.invoke('capture-cancelled'),
@@ -19,7 +25,8 @@ const api = {
     ipcRenderer.invoke('copy-image-to-clipboard', filePath),
   toggleAutoLaunch: (enabled: boolean) =>
     ipcRenderer.invoke('settings:toggle-auto-launch', enabled),
-  log: (msg: unknown) => ipcRenderer.send('log', msg)
+  log: (msg: unknown) => ipcRenderer.send('log', msg),
+  saveCaptureAs: (id: string) => ipcRenderer.invoke('save-capture-as', id)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

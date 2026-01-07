@@ -461,71 +461,136 @@ export class CaptureManager {
     const prevData = prev.data
     const currData = curr.data
     const prevHeight = prev.info.height
+    const currHeight = curr.info.height // should be same as prevHeight usually
 
-    // We assume overlap is at least 10% and at most 90% of screen to save efficiency?
-    // Or just search widely. Let's strictly search the bottom 60% of prev image.
-    const searchStartRow = Math.floor(prevHeight * 0.4)
+    // 1. Find a "Smart Anchor" in the current image (curr)
+    // We want a row that has high variance (not just a solid color like white/black background)
+    // We start searching from 10% down to avoid top headers/edges.
+    // If we can't find a good row, we default to something reasonable.
 
-    // We'll compare a horizontal strip (center 50% width) to avoid scrollbars/edge artifacts
-    const startX = Math.floor(width * 0.25)
-    const endX = Math.floor(width * 0.75)
+    let anchorY = -1
+    const startSearchY = Math.floor(prevHeight * 0.1)
+    const endSearchY = Math.floor(prevHeight * 0.4) // Don't go too deep
 
-    // Iterate backwards from the bottom of 'prev' to find where 'curr' top might start
-    // Actually, standard way: Iterate 'y' in 'prev' representing the start of the overlap.
-    // So if y=100 in prev matches y=0 in curr, then overlap is prevHeight - 100.
+    // Scan for a row with detail
+    for (let r = startSearchY; r < endSearchY; r++) {
+      if (this.getRowVariance(currData, r, width) > 100) {
+        // Threshold for "detail"
+        anchorY = r
+        break
+      }
+    }
 
-    for (let y = searchStartRow; y < prevHeight; y++) {
-      // Check if row 'y' in prev matches row '0' in curr
-      if (this.compareRows(prevData, y, currData, 0, width, startX, endX)) {
-        // Potential match found!
-        // Verify with a few more rows to be sure (e.g. check next 10 rows)
+    // Fallback if image is extremely plain
+    if (anchorY === -1) {
+      console.log('[DEBUG] No high-variance row found, defaulting anchor.')
+      anchorY = startSearchY
+    }
+
+    console.log(`[DEBUG] Smart Anchor chosen at Y=${anchorY}`)
+
+    // 2. Search for this anchor in 'prev'
+    // We expect 'curr' to be scrolled DOWN, so 'curr[anchor]' should match 'prev[y]' where y > anchor.
+    // (y = anchor + scrollAmount). S > 0 means y > anchor.
+    // We search from 'anchor' (S=0) to bottom.
+
+    const searchStartRow = anchorY
+    // const searchStartRow = anchorY + 1 // Force S > 0? Maybe not, duplicate check handles S=0.
+
+    // Optimize loop bounds
+    const startX = Math.floor(width * 0.1) // Check central 80% to be safe
+    const scanWidth = Math.floor(width * 0.8)
+
+    // We stop before the bottom allowing for the anchor space
+    for (let y = searchStartRow; y < prevHeight - 5; y++) {
+      // Check if prev[y] matches curr[anchorY]
+      if (this.compareRowsFuzzy(prevData, y, currData, anchorY, width, startX, scanWidth)) {
+        // Potential match! Verify a block of rows to confirm
+        // (Block check handles false positives from repeating patterns)
         let confirmed = true
-        const checkDepth = Math.min(20, prevHeight - y) // check up to 20 rows
+        const checkDepth = 40 // Check a large block (40 rows) for robustness
 
         for (let offset = 1; offset < checkDepth; offset++) {
-          if (!this.compareRows(prevData, y + offset, currData, offset, width, startX, endX)) {
+          // Make sure we don't go out of bounds
+          if (y + offset >= prevHeight || anchorY + offset >= currHeight) break
+
+          if (
+            !this.compareRowsFuzzy(
+              prevData,
+              y + offset,
+              currData,
+              anchorY + offset,
+              width,
+              startX,
+              scanWidth
+            )
+          ) {
             confirmed = false
             break
           }
         }
 
         if (confirmed) {
-          return prevHeight - y
+          const scrollAmount = y - anchorY
+          console.log(`[DEBUG] Match found! Scroll amount: ${scrollAmount}`)
+          // Overlap is the remaining part of prev
+          return prevHeight - scrollAmount
         }
       }
     }
 
-    return 0 // No overlap found
+    console.log('[DEBUG] No overlap match found.')
+    return 0
   }
 
-  private compareRows(
+  // Calculate generic variance of a row (sum of abs differences between adjacent pixels)
+  private getRowVariance(buf: Buffer, y: number, width: number): number {
+    const idxBase = y * width * 4
+    let variance = 0
+    const step = 4 // Sample every 4th pixel for speed
+
+    for (let x = 0; x < width - step; x += step) {
+      const i1 = idxBase + x * 4
+      const i2 = idxBase + (x + step) * 4
+      // Check difference between pixel X and pixel X+STEP
+      const diff =
+        Math.abs(buf[i1] - buf[i2]) +
+        Math.abs(buf[i1 + 1] - buf[i2 + 1]) +
+        Math.abs(buf[i1 + 2] - buf[i2 + 2])
+      variance += diff
+    }
+    return variance
+  }
+
+  private compareRowsFuzzy(
     buf1: Buffer,
     y1: number,
     buf2: Buffer,
     y2: number,
     width: number,
     startX: number,
-    endX: number
+    scanWidth: number
   ): boolean {
     const idx1Base = y1 * width * 4
     const idx2Base = y2 * width * 4
+    const endX = startX + scanWidth
 
-    // Allow slight noise tolerance? exact match is safer for screenshots unless lossy compression happened (it shouldn't in memory/png)
-    // Electron screens are usually exact.
+    let mismatchCount = 0
+    const maxMismatch = Math.floor((scanWidth / 4) * 0.1) // 10% mismatch allowed (robust)
 
     for (let x = startX; x < endX; x += 4) {
-      // stride 4 pixels for speed
       const idx1 = idx1Base + x * 4
       const idx2 = idx2Base + x * 4
 
-      if (
-        buf1[idx1] !== buf2[idx2] || // R
-        buf1[idx1 + 1] !== buf2[idx2 + 1] || // G
-        buf1[idx1 + 2] !== buf2[idx2 + 2]
-      ) {
-        // B
-        // We ignore Alpha usually, or check it too.
-        return false
+      const diffR = Math.abs(buf1[idx1] - buf2[idx2])
+      const diffG = Math.abs(buf1[idx1 + 1] - buf2[idx2 + 1])
+      const diffB = Math.abs(buf1[idx1 + 2] - buf2[idx2 + 2])
+
+      // Tolerance 10 (out of 255) maps to ~4% color shift.
+      // Allows for slight focus ring / shadow diffs but rejects structure changes.
+      if (diffR > 10 || diffG > 10 || diffB > 10) {
+        mismatchCount++
+        if (mismatchCount > maxMismatch) return false
       }
     }
     return true
@@ -584,6 +649,8 @@ export class CaptureManager {
 
         if (mainWindow) {
           console.log('[DEBUG] Finding Main Window SUCCESS. Sending event...')
+          mainWindow.show()
+          mainWindow.focus()
           mainWindow.webContents.send('capture-saved')
         } else {
           console.error('[DEBUG] Main Window NOT FOUND')

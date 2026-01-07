@@ -23,26 +23,59 @@ export class DatabaseManager {
         sourceTitle TEXT,
         width INTEGER,
         height INTEGER,
-        createdAt INTEGER
+        createdAt INTEGER,
+        isFavorite INTEGER DEFAULT 0,
+        deletedAt INTEGER DEFAULT NULL
       )
     `)
+    this.migrate()
   }
 
-  public addCapture(capture: Omit<Capture, 'id' | 'createdAt'>): Capture {
+  private migrate(): void {
+    try {
+      this.db.exec('ALTER TABLE captures ADD COLUMN isFavorite INTEGER DEFAULT 0')
+    } catch {
+      /* ignore if exists */
+    }
+    try {
+      this.db.exec('ALTER TABLE captures ADD COLUMN deletedAt INTEGER DEFAULT NULL')
+    } catch {
+      /* ignore if exists */
+    }
+  }
+
+  public addCapture(
+    capture: Omit<Capture, 'id' | 'createdAt' | 'isFavorite' | 'deletedAt'>
+  ): Capture {
     const id = uuidv4()
     const createdAt = Date.now()
+    const newCapture: Capture = {
+      ...capture,
+      id,
+      createdAt,
+      isFavorite: 0,
+      deletedAt: null
+    }
+
     const stmt = this.db.prepare(`
-      INSERT INTO captures (id, filePath, thumbPath, sourceTitle, width, height, createdAt)
-      VALUES (@id, @filePath, @thumbPath, @sourceTitle, @width, @height, @createdAt)
+      INSERT INTO captures (id, filePath, thumbPath, sourceTitle, width, height, createdAt, isFavorite, deletedAt)
+      VALUES (@id, @filePath, @thumbPath, @sourceTitle, @width, @height, @createdAt, @isFavorite, @deletedAt)
     `)
 
-    const newCapture = { ...capture, id, createdAt }
     stmt.run(newCapture)
     return newCapture
   }
 
-  public getAllCaptures(): Capture[] {
-    const stmt = this.db.prepare('SELECT * FROM captures ORDER BY createdAt DESC')
+  public getAllCaptures(filter: 'all' | 'favorites' | 'trash' = 'all'): Capture[] {
+    let query = 'SELECT * FROM captures WHERE deletedAt IS NULL'
+
+    if (filter === 'favorites') {
+      query += ' AND isFavorite = 1'
+    } else if (filter === 'trash') {
+      query = 'SELECT * FROM captures WHERE deletedAt IS NOT NULL'
+    }
+
+    const stmt = this.db.prepare(`${query} ORDER BY createdAt DESC`)
     return stmt.all() as Capture[]
   }
 
@@ -51,8 +84,40 @@ export class DatabaseManager {
     return stmt.get(id) as Capture | undefined
   }
 
+  // Permanent Delete
   public deleteCapture(id: string): void {
     const stmt = this.db.prepare('DELETE FROM captures WHERE id = ?')
     stmt.run(id)
+  }
+
+  public renameCapture(id: string, newTitle: string): void {
+    const stmt = this.db.prepare('UPDATE captures SET sourceTitle = ? WHERE id = ?')
+    stmt.run(newTitle, id)
+  }
+
+  public toggleFavorite(id: string): void {
+    // SQLite boolean toggle: 1 - x
+    const stmt = this.db.prepare('UPDATE captures SET isFavorite = 1 - isFavorite WHERE id = ?')
+    stmt.run(id)
+  }
+
+  public softDeleteCapture(id: string): void {
+    const stmt = this.db.prepare('UPDATE captures SET deletedAt = ? WHERE id = ?')
+    stmt.run(Date.now(), id)
+  }
+
+  public restoreCapture(id: string): void {
+    const stmt = this.db.prepare('UPDATE captures SET deletedAt = NULL WHERE id = ?')
+    stmt.run(id)
+  }
+
+  public getTrashFiles(): Capture[] {
+    const stmt = this.db.prepare('SELECT * FROM captures WHERE deletedAt IS NOT NULL')
+    return stmt.all() as Capture[]
+  }
+
+  public emptyTrash(): void {
+    const stmt = this.db.prepare('DELETE FROM captures WHERE deletedAt IS NOT NULL')
+    stmt.run()
   }
 }

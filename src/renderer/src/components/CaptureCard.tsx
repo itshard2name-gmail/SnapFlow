@@ -4,23 +4,23 @@ import { useState, useRef, useEffect, ReactElement } from 'react'
 interface CaptureCardProps {
   capture: Capture
   isSelected: boolean
+  isTrash?: boolean
   onClick: () => void
   onDoubleClick: () => void
   onDelete: (id: string) => void
-  onPreview: () => void
+  onRestore?: (id: string) => void
 }
 
 export function CaptureCard({
   capture,
   isSelected,
+  isTrash,
   onClick,
   onDoubleClick,
   onDelete,
-  onPreview
+  onRestore
 }: CaptureCardProps): ReactElement {
-  const [showConfirm, setShowConfirm] = useState(false)
   const [showCopied, setShowCopied] = useState(false)
-  const confirmTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleCopyClick = async (e: React.MouseEvent): Promise<void> => {
@@ -42,25 +42,13 @@ export function CaptureCard({
 
   const handleDeleteClick = (e: React.MouseEvent): void => {
     e.stopPropagation()
-    if (showConfirm) {
-      onDelete(capture.id)
-      setShowConfirm(false)
-    } else {
-      setShowConfirm(true)
-      confirmTimeoutRef.current = setTimeout(() => {
-        setShowConfirm(false)
-      }, 3000)
-    }
-  }
-
-  const handlePreviewClick = (e: React.MouseEvent): void => {
-    e.stopPropagation()
-    onPreview()
+    // Soft delete is instant (Trash feature enabled)
+    // Permanent delete checking is handled downstream or acceptable risk for efficiency as requested
+    onDelete(capture.id)
   }
 
   useEffect(() => {
     return (): void => {
-      if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current)
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
     }
   }, [])
@@ -70,162 +58,133 @@ export function CaptureCard({
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       className={`
-        group relative cursor-pointer rounded-xl overflow-hidden border transition-all duration-300
+        group relative cursor-pointer rounded-xl overflow-hidden transition-all duration-300
         ${
           isSelected
-            ? 'border-blue-500 ring-2 ring-blue-500/20 bg-slate-800 shadow-lg scale-[1.02]'
-            : 'border-slate-700/50 hover:border-slate-600 bg-slate-900 shadow-md hover:shadow-xl hover:-translate-y-0.5'
+            ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20 scale-[1.02] z-10'
+            : 'hover:scale-[1.02] hover:shadow-xl hover:z-10'
         }
       `}
     >
-      {/* Aspect Ratio Container */}
-      <div className="aspect-[16/10] w-full bg-slate-950 relative overflow-hidden">
+      {/* Aspect Ratio Container - Enforce 16:10 for uniform grid */}
+      <div className="relative w-full aspect-[16/10] bg-slate-900 group-hover:shadow-inner transition-all duration-300">
         <img
           src={`media://${capture.thumbPath}`}
           alt={capture.sourceTitle}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-cover object-top block"
           loading="lazy"
         />
 
-        {/* Hover Overlay with Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-start justify-end p-2 gap-2">
-          {/* Preview Button */}
-          <div className="relative group/btn">
+        {/* Top-Right Action Toolbar (Visible on hover) */}
+        <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+          {isTrash ? (
+            // RESTORE BUTTON
             <button
-              onClick={handlePreviewClick}
-              className="p-2 rounded-full bg-blue-500 hover:bg-blue-400 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-110 active:scale-95"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRestore?.(capture.id)
+              }}
+              className="group/btn relative w-8 h-8 rounded-lg bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/50 flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/10"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M15 3h6v6" />
-                <path d="M10 14L21 3" />
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              </svg>
+              <span className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-white/10 z-30">
+                Restore
+              </span>
+              <span className="text-lg">↩</span>
             </button>
-            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-              Preview
-            </span>
-          </div>
-
-          {/* Copy Button */}
-          <div className="relative group/btn">
+          ) : (
+            // COPY BUTTON
             <button
               onClick={handleCopyClick}
-              className={`
-                p-2 rounded-full text-white shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110 active:scale-95
-                ${showCopied ? 'bg-green-500 hover:bg-green-400' : 'bg-slate-500 hover:bg-slate-400'}
-              `}
+              className="group/btn relative w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/50 flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/10"
             >
+              {/* Tooltip */}
+              <span className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-white/10 z-30">
+                Copy Image
+              </span>
+
               {showCopied ? (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  className="w-4 h-4 text-white"
                 >
-                  <polyline points="20 6 9 17 4 12" />
+                  <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
               ) : (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  className="w-4 h-4"
                 >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                 </svg>
               )}
             </button>
-            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-              {showCopied ? 'Copied!' : 'Copy Img'}
-            </span>
-          </div>
+          )}
 
           {/* Delete Button */}
-          <div className="relative group/btn">
-            <button
-              onClick={handleDeleteClick}
-              className={`
-                p-2 rounded-full text-white shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110 active:scale-95
-                ${showConfirm ? 'bg-red-600' : 'bg-red-500 hover:bg-red-400'}
-              `}
-            >
-              {showConfirm ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M3 6h18" />
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                </svg>
-              )}
-            </button>
-            <span className="absolute -bottom-8 right-0 px-2 py-1 bg-black/80 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-              {showConfirm ? 'Confirm?' : 'Delete'}
+          <button
+            onClick={handleDeleteClick}
+            className="group/btn relative w-8 h-8 rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/50 flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-white/10"
+          >
+            {/* Tooltip */}
+            <span className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-white/10 z-30">
+              {isTrash ? 'Delete Permanently' : 'Trash'}
             </span>
-          </div>
+
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4"
+            >
+              {}
+              {isTrash ? (
+                <>
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="14" y2="15"></line>
+                  <line x1="14" y1="11" x2="10" y2="15"></line>
+                </>
+              ) : (
+                <>
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </>
+              )}
+            </svg>
+          </button>
         </div>
+
+        {/* Selection Indicator */}
+        {isSelected && (
+          <div className="absolute inset-0 border-2 border-blue-500 rounded-xl pointer-events-none" />
+        )}
       </div>
 
-      {/* Card Details */}
-      <div className="p-3 border-t border-slate-800 bg-slate-900/50 backdrop-blur-md">
-        <h3
-          className="text-sm font-medium text-slate-200 truncate pr-4"
-          title={capture.sourceTitle}
-        >
-          {capture.sourceTitle || 'Untitled Capture'}
+      {/* Info Gradient overlay at bottom - Visible on hover only */}
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+        <h3 className="text-white text-xs font-medium truncate drop-shadow-md">
+          {capture.sourceTitle || 'Untitled'}
         </h3>
-        <div className="flex justify-between items-end mt-1">
-          <p className="text-[10px] text-slate-500 font-mono">
-            {capture.width} × {capture.height}
-          </p>
-          <p className="text-[10px] text-slate-400">
-            {new Date(capture.createdAt).toLocaleDateString()}
-          </p>
-        </div>
+        <p className="text-[10px] text-slate-300 font-mono mt-0.5">
+          {capture.width} × {capture.height}
+        </p>
       </div>
     </div>
   )

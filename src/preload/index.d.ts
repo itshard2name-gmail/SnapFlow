@@ -4,8 +4,15 @@ declare global {
   interface Window {
     electron: ElectronAPI
     api: {
-      getAllCaptures: () => Promise<import('../shared/types').Capture[]>
+      getAllCaptures: (
+        filter?: 'all' | 'favorites' | 'trash'
+      ) => Promise<import('../shared/types').Capture[]>
       deleteCapture: (id: string) => Promise<void>
+      softDeleteCapture: (id: string) => Promise<void>
+      restoreCapture: (id: string) => Promise<void>
+      toggleFavorite: (id: string) => Promise<void>
+      emptyTrash: () => Promise<void>
+      renameCapture: (id: string, title: string) => Promise<void>
       openPath: (path: string) => Promise<void>
       confirmCapture: (rect: {
         x: number
@@ -29,6 +36,7 @@ declare global {
         }[]
       >
       captureWindow: (id: number, sourceTitle: string) => Promise<import('../shared/types').Capture>
+      saveCaptureAs: (id: string) => Promise<boolean>
     }
   }
 }

@@ -274,6 +274,10 @@ ipcMain.handle(
         })
 
         // Notify renderers
+        if (mainWindow) {
+          mainWindow.show()
+          mainWindow.focus()
+        }
         BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('capture-saved'))
 
         return capture
@@ -287,36 +291,63 @@ ipcMain.handle(
   }
 )
 
-ipcMain.handle('get-all-captures', () => {
-  return dbManager.getAllCaptures()
+ipcMain.handle('get-all-captures', (_, filter: 'all' | 'favorites' | 'trash' = 'all') => {
+  return dbManager.getAllCaptures(filter)
 })
 
 ipcMain.handle('delete-capture', (_, id: string) => {
   const capture = dbManager.getCapture(id)
   if (capture) {
     try {
-      // Delete the main file
-      if (capture.filePath && fs.existsSync(capture.filePath)) {
-        fs.unlinkSync(capture.filePath)
-        console.log('Deleted file:', capture.filePath)
-      }
-
-      // Delete the thumbnail if it's a different file
+      // Delete files immediately for permanent delete
+      if (capture.filePath && fs.existsSync(capture.filePath)) fs.unlinkSync(capture.filePath)
       if (
         capture.thumbPath &&
         capture.thumbPath !== capture.filePath &&
         fs.existsSync(capture.thumbPath)
       ) {
         fs.unlinkSync(capture.thumbPath)
-        console.log('Deleted thumbnail:', capture.thumbPath)
       }
     } catch (error) {
       console.error('Error deleting capture files:', error)
     }
-
-    // Always remove from DB to keep UI in sync
     dbManager.deleteCapture(id)
   }
+})
+
+ipcMain.handle('soft-delete-capture', (_, id: string) => {
+  dbManager.softDeleteCapture(id)
+})
+
+ipcMain.handle('restore-capture', (_, id: string) => {
+  dbManager.restoreCapture(id)
+})
+
+ipcMain.handle('toggle-favorite', (_, id: string) => {
+  dbManager.toggleFavorite(id)
+})
+
+ipcMain.handle('empty-trash', () => {
+  const trashed = dbManager.getTrashFiles()
+  trashed.forEach((capture) => {
+    try {
+      if (capture.filePath && fs.existsSync(capture.filePath)) fs.unlinkSync(capture.filePath)
+      if (
+        capture.thumbPath &&
+        capture.thumbPath !== capture.filePath &&
+        fs.existsSync(capture.thumbPath)
+      ) {
+        fs.unlinkSync(capture.thumbPath)
+      }
+    } catch (error) {
+      console.error(`Error deleting trashed file ${capture.id}:`, error)
+    }
+  })
+  dbManager.emptyTrash()
+})
+
+ipcMain.handle('rename-capture', (_, { id, title }: { id: string; title: string }) => {
+  dbManager.renameCapture(id, title)
 })
 
 ipcMain.handle('open-path', async (_, path: string) => {
@@ -332,6 +363,32 @@ ipcMain.handle('copy-image-to-clipboard', async (_, filePath: string) => {
     console.error('Failed to copy image to clipboard:', error)
     return false
   }
+})
+
+ipcMain.handle('save-capture-as', async (_, id: string) => {
+  const { dialog } = await import('electron')
+  const capture = dbManager.getCapture(id)
+
+  if (!capture || !fs.existsSync(capture.filePath)) {
+    return false
+  }
+
+  const result = await dialog.showSaveDialog(mainWindow!, {
+    title: 'Export Capture',
+    defaultPath: `Capture-${new Date(capture.createdAt).toISOString().split('T')[0]}.png`,
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }]
+  })
+
+  if (!result.canceled && result.filePath) {
+    try {
+      fs.copyFileSync(capture.filePath, result.filePath)
+      return true
+    } catch (error) {
+      console.error('Failed to export file:', error)
+      return false
+    }
+  }
+  return false
 })
 
 app.on('before-quit', () => {
