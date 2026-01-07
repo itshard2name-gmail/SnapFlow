@@ -65,6 +65,8 @@ npm run dev
 npm run build:mac
 ```
 
+> **Note for Contributors:** Please read `DEVELOPMENT.md` before submitting changes. This project enforces strict type safety and linting rules (checked via Husky).
+
 ### Tech Stack
 
 - **Core**: Electron, Node.js
