@@ -5,9 +5,15 @@ interface SidebarProps {
   activeView: 'all' | 'favorites' | 'trash'
   onViewChange: (view: 'all' | 'favorites' | 'trash') => void
   onRefresh: () => void
+  counts: { all: number; favorites: number; trash: number }
 }
 
-export function Sidebar({ activeView, onViewChange, onRefresh }: SidebarProps): ReactElement {
+export function Sidebar({
+  activeView,
+  onViewChange,
+  onRefresh,
+  counts
+}: SidebarProps): ReactElement {
   return (
     <div className="w-64 h-full glass flex flex-col pt-6 pb-4 transition-colors duration-300 relative z-20">
       {/* App Branding */}
@@ -52,7 +58,16 @@ export function Sidebar({ activeView, onViewChange, onRefresh }: SidebarProps): 
           }`}
         >
           <span className="text-lg">📸</span>
-          <span>All Captures</span>
+          <span className="flex-1">All Captures</span>
+          {counts.all > 0 && (
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                activeView === 'all' ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-500'
+              }`}
+            >
+              {counts.all}
+            </span>
+          )}
         </div>
 
         <div
@@ -64,7 +79,16 @@ export function Sidebar({ activeView, onViewChange, onRefresh }: SidebarProps): 
           }`}
         >
           <span className="text-lg">⭐️</span>
-          <span>Favorites</span>
+          <span className="flex-1">Favorites</span>
+          {counts.favorites > 0 && (
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                activeView === 'favorites' ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-500'
+              }`}
+            >
+              {counts.favorites}
+            </span>
+          )}
         </div>
 
         <div
@@ -76,7 +100,18 @@ export function Sidebar({ activeView, onViewChange, onRefresh }: SidebarProps): 
           }`}
         >
           <span className="text-lg">🗑️</span>
-          <span>Trash</span>
+          <span className="flex-1">Trash</span>
+          {counts.trash > 0 && (
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md animate-pulse-subtle ${
+                activeView === 'trash'
+                  ? 'bg-red-500/30 text-red-200 ring-1 ring-red-500/50'
+                  : 'bg-red-500/10 text-red-400/70 border border-red-500/20'
+              }`}
+            >
+              {counts.trash}
+            </span>
+          )}
         </div>
       </nav>
 

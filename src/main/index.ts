@@ -136,9 +136,6 @@ app.whenReady().then(() => {
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -183,20 +180,29 @@ app.whenReady().then(() => {
     // Mock logic: Create a dummy file in userData and add to DB
     // const fs = require('fs')
     // const path = require('path')
-    const destPath = path.join(app.getPath('userData'), `mock-${Date.now()}.png`)
+    const now = new Date()
+    const datePart = now.toISOString().split('T')[0]
+    const timePart = now.toTimeString().split(' ')[0]
+    const displayTime = `${datePart} ${timePart}`
+    const filenameTimePart = timePart.replace(/:/g, '')
+
+    const destPath = path.join(
+      app.getPath('userData'),
+      `mock-${datePart.replace(/-/g, '')}-${filenameTimePart}.png`
+    )
 
     // Create a simple colored SVG as a placeholder image
     const svgContent = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
       <rect width="100%" height="100%" fill="#${Math.floor(Math.random() * 16777215).toString(16)}"/>
-      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="40" fill="white">SnapFlow Capture</text>
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="40" fill="white">Scope Capture</text>
     </svg>`
 
     fs.writeFileSync(destPath, svgContent)
 
     return dbManager.addCapture({
       filePath: destPath,
-      thumbPath: destPath, // Using same file for thumb for simplicity in mock
-      sourceTitle: 'Mock Window',
+      thumbPath: destPath,
+      sourceTitle: `Mock Window (${displayTime})`,
       width: 800,
       height: 600
     })
@@ -229,8 +235,15 @@ ipcMain.handle('get-open-windows', async () => {
 ipcMain.handle(
   'capture-window',
   async (_, { id, sourceTitle }: { id: number; sourceTitle: string }) => {
+    const now = new Date()
+    const datePart = now.toISOString().split('T')[0] // YYYY-MM-DD
+    const timePart = now.toTimeString().split(' ')[0] // HH:mm:ss
+    const displayTime = `${datePart} ${timePart}` // YYYY-MM-DD HH:mm:ss
+    const filenameTimePart = timePart.replace(/:/g, '') // HHmmss
+    const filename = `capture-${datePart.replace(/-/g, '')}-${filenameTimePart}.png` // YYYYMMDD-HHmmss
+
     const tempPath = join(app.getPath('userData'), `temp-${Date.now()}.png`)
-    const finalPath = join(app.getPath('userData'), `capture-${Date.now()}.png`)
+    const finalPath = join(app.getPath('userData'), filename)
 
     // Play shutter sound immediately (macOS only)
     if (process.platform === 'darwin') {
@@ -242,23 +255,11 @@ ipcMain.handle(
     }
 
     try {
-      // screencapture -x (no sound) -l <windowId> <path>
-      // Note: -o (no shadow) is optional, user didn't specify, but often preferred for clean 'window' captures.
-      // Plan said: -x -l [windowID].
       await execPromise(`screencapture -x -o -l ${id} "${tempPath}"`)
 
-      // Check if file created
       if (fs.existsSync(tempPath)) {
-        // Move to final or just use tempPath? Let's use it as is for now.
-        // Actually, let's keep it clean.
         fs.renameSync(tempPath, finalPath)
 
-        // Get dimensions of the file
-        // We can use 'sips' or just trust the window bounds passed earlier?
-        // Better to read the file or just use 'image-size' lib?
-        // For simplicity let's rely on standard metadata or simple assumption for now.
-        // Wait, we need width/height for DB.
-        // Let's us use 'sips -g pixelWidth -g pixelHeight file'
         const { stdout } = await execPromise(`sips -g pixelWidth -g pixelHeight "${finalPath}"`)
         const widthMatch = stdout.match(/pixelWidth: (\d+)/)
         const heightMatch = stdout.match(/pixelHeight: (\d+)/)
@@ -268,7 +269,7 @@ ipcMain.handle(
         const capture = await dbManager.addCapture({
           filePath: finalPath,
           thumbPath: finalPath,
-          sourceTitle: sourceTitle || 'Window Capture',
+          sourceTitle: `${sourceTitle || 'Window Capture'} (${displayTime})`,
           width,
           height
         })
@@ -293,6 +294,10 @@ ipcMain.handle(
 
 ipcMain.handle('get-all-captures', (_, filter: 'all' | 'favorites' | 'trash' = 'all') => {
   return dbManager.getAllCaptures(filter)
+})
+
+ipcMain.handle('get-category-counts', () => {
+  return dbManager.getCategoryCounts()
 })
 
 ipcMain.handle('delete-capture', (_, id: string) => {
@@ -347,7 +352,11 @@ ipcMain.handle('empty-trash', () => {
 })
 
 ipcMain.handle('rename-capture', (_, { id, title }: { id: string; title: string }) => {
-  dbManager.renameCapture(id, title)
+  return dbManager.renameCapture(id, title)
+})
+
+ipcMain.handle('update-notes', (_, { id, notes }: { id: string; notes: string }) => {
+  return dbManager.updateNotes(id, notes)
 })
 
 ipcMain.handle('open-path', async (_, path: string) => {
@@ -389,6 +398,71 @@ ipcMain.handle('save-capture-as', async (_, id: string) => {
     }
   }
   return false
+})
+
+ipcMain.handle(
+  'save-annotated-image',
+  async (_, { id, dataUrl, overwrite }: { id: string; dataUrl: string; overwrite: boolean }) => {
+    const capture = dbManager.getCapture(id)
+    if (!capture) return false
+
+    try {
+      const base64Data = dataUrl.split(';base64,').pop()
+      if (!base64Data) return false
+
+      const buffer = Buffer.from(base64Data, 'base64')
+
+      if (overwrite) {
+        fs.writeFileSync(capture.filePath, buffer)
+        if (capture.thumbPath && fs.existsSync(capture.thumbPath)) {
+          fs.writeFileSync(capture.thumbPath, buffer)
+        }
+      } else {
+        // Save as copy
+        const dir = path.dirname(capture.filePath)
+        const ext = path.extname(capture.filePath)
+        const base = path.basename(capture.filePath, ext)
+        const now = new Date()
+        const datePart = now.toISOString().split('T')[0] // YYYY-MM-DD
+        const timePart = now.toTimeString().split(' ')[0] // HH:mm:ss
+        const displayTime = `${datePart} ${timePart}` // YYYY-MM-DD HH:mm:ss
+        const filenameTimePart = timePart.replace(/:/g, '') // HHmmss
+
+        const newPath = path.join(
+          dir,
+          `${base.split('-annotated-')[0]}-annotated-${datePart.replace(/-/g, '')}-${filenameTimePart}${ext}`
+        )
+        fs.writeFileSync(newPath, buffer)
+
+        // Add to DB
+        await dbManager.addCapture({
+          filePath: newPath,
+          thumbPath: newPath,
+          sourceTitle: `${capture.sourceTitle.split(' (')[0]} (Annotated) (${displayTime})`,
+          width: capture.width,
+          height: capture.height
+        })
+      }
+
+      // Notify all windows to refresh
+      BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('capture-saved'))
+      return true
+    } catch (error) {
+      console.error('Failed to save annotated image:', error)
+      return false
+    }
+  }
+)
+
+ipcMain.handle('copy-image-data-to-clipboard', async (_, dataUrl: string) => {
+  try {
+    const img = nativeImage.createFromDataURL(dataUrl)
+    clipboard.writeImage(img)
+    return true
+  } catch (error) {
+    console.error('Failed to copy image to clipboard:', error)
+    return false
+  }
 })
 
 app.on('before-quit', () => {

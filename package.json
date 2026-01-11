@@ -28,7 +28,9 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@types/fabric": "^5.3.11",
     "better-sqlite3": "^12.5.0",
+    "fabric": "^7.1.0",
     "sharp": "^0.34.5",
     "uuid": "^13.0.0"
   },

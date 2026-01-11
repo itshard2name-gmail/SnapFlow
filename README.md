@@ -1,5 +1,3 @@
-# Scope
-
 **Zero-Latency Screen Capture for Professionals.**
 
 Scope is a high-performance screen capture tool designed for speed, precision, and uninterrupted workflows. Built on a modernized Electron architecture, it eliminates "overlay lag" and "focus stealing," ensuring you can capture exactly what you see—even fleeting menus and popups.
@@ -26,6 +24,9 @@ Hover over any application—even in multi-monitor setups—and Scope instantly 
 ### 💧 Seamless Workflow
 
 - **Dropdown Safe**: Designed to capture menus, tooltips, and popups. Scope won't steal focus when activated.
+- **Searchable Identifiers**: Every capture is automatically tagged with a readable timestamp (e.g., `2026-01-11 14:27:29`). Search by date or title instantly.
+- **Functional Notes**: Add context or reminders to any capture with the built-in notes sidebar.
+- **Professional Annotation**: Robust tools including Arrow, Text, Box, Pen, and Mosaic with native Zoom/Pan support.
 - **Instant Dashboard**: Review, copy to clipboard, or save your captures immediately.
 - **Local Storage**: All data lives on your machine. No cloud uploads.
 

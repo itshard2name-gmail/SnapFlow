@@ -431,8 +431,17 @@ export class CaptureManager {
       }
 
       // Render
+      const now = new Date()
+      const datePart = now.toISOString().split('T')[0] // YYYY-MM-DD
+      const timePart = now.toTimeString().split(' ')[0] // HH:mm:ss
+      const displayTime = `${datePart} ${timePart}` // YYYY-MM-DD HH:mm:ss
+      const filenameTimePart = timePart.replace(/:/g, '') // HHmmss
+
+      const outputPath = path.join(
+        app.getPath('userData'),
+        `capture-long-${datePart.replace(/-/g, '')}-${filenameTimePart}.png`
+      )
       const finalHeight = currentY
-      const outputPath = path.join(app.getPath('userData'), `capture-long-${Date.now()}.png`)
 
       console.log(`[DEBUG] Final Output: ${actualWidth}x${finalHeight}`)
 
@@ -452,7 +461,7 @@ export class CaptureManager {
       this.dbManager.addCapture({
         filePath: outputPath,
         thumbPath: outputPath,
-        sourceTitle: 'Scroll Capture',
+        sourceTitle: `Scroll Capture (${displayTime})`,
         width: actualWidth,
         height: finalHeight
       })
@@ -659,7 +668,13 @@ export class CaptureManager {
     const globalY = displayBounds.y + y
     const tempDir = path.join(app.getPath('userData'), 'Captures')
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
-    const filename = `capture-${Date.now()}.png`
+    const now = new Date()
+    const datePart = now.toISOString().split('T')[0] // YYYY-MM-DD
+    const timePart = now.toTimeString().split(' ')[0] // HH:mm:ss
+    const displayTime = `${datePart} ${timePart}` // YYYY-MM-DD HH:mm:ss
+    const filenameTimePart = timePart.replace(/:/g, '') // HHmmss
+
+    const filename = `capture-${datePart.replace(/-/g, '')}-${filenameTimePart}.png`
     const filePath = path.join(tempDir, filename)
 
     if (this.captureWindow) this.captureWindow.hide()
@@ -673,7 +688,7 @@ export class CaptureManager {
       this.dbManager.addCapture({
         filePath,
         thumbPath: filePath,
-        sourceTitle: 'Screen Capture',
+        sourceTitle: `Screen Capture (${displayTime})`,
         width,
         height
       })

@@ -12,6 +12,11 @@ function App(): ReactElement {
 
   // View State Management
   const [activeView, setActiveView] = useState<'all' | 'favorites' | 'trash'>('all')
+  const [counts, setCounts] = useState<{ all: number; favorites: number; trash: number }>({
+    all: 0,
+    favorites: 0,
+    trash: 0
+  })
 
   const fetchCaptures = useCallback(async (): Promise<void> => {
     try {
@@ -26,9 +31,19 @@ function App(): ReactElement {
     }
   }, [activeView])
 
+  const fetchCounts = useCallback(async (): Promise<void> => {
+    try {
+      const c = await window.api.getCategoryCounts()
+      setCounts(c)
+    } catch (error) {
+      console.error('Failed to fetch counts:', error)
+    }
+  }, [])
+
   useEffect(() => {
     setTimeout(() => {
       fetchCaptures()
+      fetchCounts()
     }, 0)
 
     // Listen for new captures from main process
@@ -37,12 +52,13 @@ function App(): ReactElement {
       if (activeView === 'all') {
         fetchCaptures()
       }
+      fetchCounts()
     })
 
     return (): void => {
       removeListener()
     }
-  }, [fetchCaptures, activeView])
+  }, [fetchCaptures, activeView, fetchCounts])
 
   const handleDelete = async (id: string): Promise<void> => {
     try {
@@ -117,7 +133,15 @@ function App(): ReactElement {
 
   return (
     <div className="flex h-screen bg-transparent text-slate-200 font-sans overflow-hidden">
-      <Sidebar activeView={activeView} onViewChange={setActiveView} onRefresh={fetchCaptures} />
+      <Sidebar
+        activeView={activeView}
+        onViewChange={setActiveView}
+        onRefresh={() => {
+          fetchCaptures()
+          fetchCounts()
+        }}
+        counts={counts}
+      />
 
       {/* Main Content - Standard Split Pane */}
       <main className="flex-1 flex flex-col min-w-0 relative z-10 glass rounded-none overflow-hidden border-l border-white/10 shadow-2xl h-screen">

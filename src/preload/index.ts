@@ -5,12 +5,14 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   getAllCaptures: (filter?: 'all' | 'favorites' | 'trash') =>
     ipcRenderer.invoke('get-all-captures', filter),
+  getCategoryCounts: () => ipcRenderer.invoke('get-category-counts'),
   deleteCapture: (id: string) => ipcRenderer.invoke('delete-capture', id),
   softDeleteCapture: (id: string) => ipcRenderer.invoke('soft-delete-capture', id),
   restoreCapture: (id: string) => ipcRenderer.invoke('restore-capture', id),
   toggleFavorite: (id: string) => ipcRenderer.invoke('toggle-favorite', id),
   emptyTrash: () => ipcRenderer.invoke('empty-trash'),
   renameCapture: (id: string, title: string) => ipcRenderer.invoke('rename-capture', { id, title }),
+  updateNotes: (id: string, notes: string) => ipcRenderer.invoke('update-notes', { id, notes }),
   mockAddCapture: () => ipcRenderer.invoke('mock-add-capture'),
   confirmCapture: (data: unknown) => ipcRenderer.invoke('capture-confirmed', data),
   cancelCapture: () => ipcRenderer.invoke('capture-cancelled'),
@@ -26,7 +28,11 @@ const api = {
   toggleAutoLaunch: (enabled: boolean) =>
     ipcRenderer.invoke('settings:toggle-auto-launch', enabled),
   log: (msg: unknown) => ipcRenderer.send('log', msg),
-  saveCaptureAs: (id: string) => ipcRenderer.invoke('save-capture-as', id)
+  saveCaptureAs: (id: string) => ipcRenderer.invoke('save-capture-as', id),
+  saveAnnotatedImage: (id: string, dataUrl: string, overwrite: boolean) =>
+    ipcRenderer.invoke('save-annotated-image', { id, dataUrl, overwrite }),
+  copyImageDataToClipboard: (dataUrl: string) =>
+    ipcRenderer.invoke('copy-image-data-to-clipboard', dataUrl)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

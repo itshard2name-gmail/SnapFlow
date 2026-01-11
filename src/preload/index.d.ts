@@ -7,12 +7,14 @@ declare global {
       getAllCaptures: (
         filter?: 'all' | 'favorites' | 'trash'
       ) => Promise<import('../shared/types').Capture[]>
+      getCategoryCounts: () => Promise<{ all: number; favorites: number; trash: number }>
       deleteCapture: (id: string) => Promise<void>
       softDeleteCapture: (id: string) => Promise<void>
       restoreCapture: (id: string) => Promise<void>
       toggleFavorite: (id: string) => Promise<void>
       emptyTrash: () => Promise<void>
       renameCapture: (id: string, title: string) => Promise<void>
+      updateNotes: (id: string, notes: string) => Promise<void>
       openPath: (path: string) => Promise<void>
       confirmCapture: (rect: {
         x: number

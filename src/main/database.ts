@@ -25,7 +25,8 @@ export class DatabaseManager {
         height INTEGER,
         createdAt INTEGER,
         isFavorite INTEGER DEFAULT 0,
-        deletedAt INTEGER DEFAULT NULL
+        deletedAt INTEGER DEFAULT NULL,
+        notes TEXT DEFAULT ''
       )
     `)
     this.migrate()
@@ -39,6 +40,11 @@ export class DatabaseManager {
     }
     try {
       this.db.exec('ALTER TABLE captures ADD COLUMN deletedAt INTEGER DEFAULT NULL')
+    } catch {
+      /* ignore if exists */
+    }
+    try {
+      this.db.exec("ALTER TABLE captures ADD COLUMN notes TEXT DEFAULT ''")
     } catch {
       /* ignore if exists */
     }
@@ -111,6 +117,11 @@ export class DatabaseManager {
     stmt.run(id)
   }
 
+  public updateNotes(id: string, notes: string): void {
+    const stmt = this.db.prepare('UPDATE captures SET notes = ? WHERE id = ?')
+    stmt.run(notes, id)
+  }
+
   public getTrashFiles(): Capture[] {
     const stmt = this.db.prepare('SELECT * FROM captures WHERE deletedAt IS NOT NULL')
     return stmt.all() as Capture[]
@@ -119,5 +130,27 @@ export class DatabaseManager {
   public emptyTrash(): void {
     const stmt = this.db.prepare('DELETE FROM captures WHERE deletedAt IS NOT NULL')
     stmt.run()
+  }
+
+  public getCategoryCounts(): { all: number; favorites: number; trash: number } {
+    const all = this.db
+      .prepare('SELECT COUNT(*) as count FROM captures WHERE deletedAt IS NULL')
+      .get() as {
+      count: number
+    }
+    const favorites = this.db
+      .prepare('SELECT COUNT(*) as count FROM captures WHERE deletedAt IS NULL AND isFavorite = 1')
+      .get() as { count: number }
+    const trash = this.db
+      .prepare('SELECT COUNT(*) as count FROM captures WHERE deletedAt IS NOT NULL')
+      .get() as {
+      count: number
+    }
+
+    return {
+      all: all.count,
+      favorites: favorites.count,
+      trash: trash.count
+    }
   }
 }
