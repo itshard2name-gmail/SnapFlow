@@ -126,7 +126,6 @@ export function DetailView({
   const handleToggleFavorite = async (e: React.MouseEvent, id: string): Promise<void> => {
     e.stopPropagation()
     try {
-      // @ts-ignore: api exposed
       await window.api.toggleFavorite(id)
       onRename() // Refresh parent
     } catch (err) {
@@ -136,7 +135,6 @@ export function DetailView({
 
   const handleRestore = async (id: string): Promise<void> => {
     try {
-      // @ts-ignore: api exposed
       await window.api.restoreCapture(id)
       onRename() // Refresh parent
       onClose() // Close detail since it moved out of trash
@@ -367,7 +365,6 @@ export function DetailView({
             defaultValue={capture.sourceTitle || 'Untitled'}
             onBlur={async (e) => {
               const newTitle = e.target.value.trim() || 'Untitled'
-              // @ts-ignore: window.api is exposed via preload in Electron
               await window.api.renameCapture(capture.id, newTitle)
               onRename()
             }}
@@ -413,7 +410,6 @@ export function DetailView({
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => {
-                // @ts-ignore: window.api is exposed
                 window.api.saveCaptureAs(capture.id)
               }}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors"

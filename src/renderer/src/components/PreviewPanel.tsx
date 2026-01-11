@@ -28,7 +28,6 @@ export function PreviewPanel({ capture, onDelete }: PreviewPanelProps): ReactEle
         <div
           className="rounded-lg overflow-hidden border border-slate-700 bg-slate-950 mb-4 cursor-pointer hover:border-blue-500 transition-colors group relative"
           onClick={async () => {
-            // @ts-ignore: window.api is exposed via preload script
             await window.api.openPath(capture.filePath)
           }}
           title="Click to open full image"
@@ -79,7 +78,6 @@ export function PreviewPanel({ capture, onDelete }: PreviewPanelProps): ReactEle
               className="block text-xs text-slate-400 mt-1 bg-slate-950 p-2 rounded border border-slate-800 break-all cursor-pointer hover:text-blue-400 hover:border-blue-900 transition-colors"
               onClick={(e) => {
                 e.stopPropagation()
-                // @ts-ignore: window.api is exposed via preload script
                 window.api.openPath(capture.filePath)
               }}
               title="Click to open"
@@ -92,7 +90,6 @@ export function PreviewPanel({ capture, onDelete }: PreviewPanelProps): ReactEle
 
       <div className="p-4 border-t border-slate-800 bg-slate-900 flex gap-2">
         <button
-          // @ts-ignore: window.api is exposed via preload script
           onClick={() => window.api.openPath(capture.filePath)}
           className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-medium transition-colors border border-slate-700 hover:border-slate-600"
         >

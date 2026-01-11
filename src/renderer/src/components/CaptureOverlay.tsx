@@ -1,14 +1,5 @@
 import { useRef, useState, useEffect, useCallback, ReactElement } from 'react'
-
-interface WindowInfo {
-  id: number
-  x: number
-  y: number
-  width: number
-  height: number
-  title: string
-  app: string
-}
+import { WindowInfo } from '../../../shared/types'
 
 interface CaptureOverlayProps {
   mode: 'region' | 'window' | 'scroll'
@@ -134,7 +125,6 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
     if (mode === 'window') {
       const fetchWindows = async (): Promise<void> => {
         try {
-          // @ts-ignore: window.api is exposed via preload script
           const winList = await window.api.getOpenWindows()
           console.log('Fetched Windows:', winList.length)
           setWindows(winList)
@@ -158,7 +148,6 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
 
   // Mouse Handlers
   const handleMouseDown = (e: React.MouseEvent): void => {
-    // @ts-ignore: window.api is exposed via preload script
     window.api.log(
       `[RENDERER-DEBUG] Mouse Down: mode=${mode} x=${e.nativeEvent.offsetX} y=${e.nativeEvent.offsetY}`
     )
@@ -171,7 +160,6 @@ export function CaptureOverlay({ mode, onConfirm, onCancel }: CaptureOverlayProp
           y: activeWindow.y - window.screenY,
           width: activeWindow.width,
           height: activeWindow.height,
-          // @ts-ignore: Extending the type implicitly for App.tsx to handle
           id: activeWindow.id,
           sourceTitle: activeWindow.app || activeWindow.title
         })

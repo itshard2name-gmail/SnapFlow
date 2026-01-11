@@ -15,11 +15,9 @@ function App(): ReactElement {
 
   const fetchCaptures = useCallback(async (): Promise<void> => {
     try {
-      // @ts-ignore: window.api is exposed via preload script
       const data = await window.api.getAllCaptures(activeView)
       // Sort by newest first (server side sorting preferred but good to have safety)
-      // @ts-ignore: Sort types
-      const sorted = data.sort(
+      const sorted = [...data].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
       setCaptures(sorted)
@@ -34,7 +32,6 @@ function App(): ReactElement {
     }, 0)
 
     // Listen for new captures from main process
-    // @ts-ignore: window.electron is exposed via preload script
     const removeListener = window.electron.ipcRenderer.on('capture-saved', () => {
       // Only refresh if we are in 'all' view or 'favorites' (and new one is fav? unlikely)
       if (activeView === 'all') {
@@ -51,11 +48,9 @@ function App(): ReactElement {
     try {
       if (activeView === 'trash') {
         // Permanent delete
-        // @ts-ignore: window.api is exposed via preload script
         await window.api.deleteCapture(id)
       } else {
         // Soft delete
-        // @ts-ignore: window.api is exposed via preload script
         await window.api.softDeleteCapture(id)
       }
 
@@ -68,7 +63,6 @@ function App(): ReactElement {
 
   const handleRestore = async (id: string): Promise<void> => {
     try {
-      // @ts-ignore: window.api is exposed via preload script
       await window.api.restoreCapture(id)
       fetchCaptures()
     } catch (error) {
@@ -81,7 +75,6 @@ function App(): ReactElement {
     if (!confirm('Are you sure you want to empty the trash? This cannot be undone.')) return
 
     try {
-      // @ts-ignore: api exposed
       await window.api.emptyTrash()
       fetchCaptures()
     } catch (error) {
@@ -102,17 +95,13 @@ function App(): ReactElement {
         mode={mode as 'region' | 'window' | 'scroll'}
         onConfirm={(rect) => {
           if (rect.id && mode === 'window') {
-            // @ts-ignore: window.api is exposed via preload script
             window.api.cancelCapture()
-            // @ts-ignore: window.api is exposed via preload script
             window.api.captureWindow(rect.id, rect.sourceTitle || 'Window Capture')
           } else {
-            // @ts-ignore: window.api is exposed via preload script
             window.api.confirmCapture({ ...rect, sourceId: 'primary' })
           }
         }}
         onCancel={() => {
-          // @ts-ignore: window.api is exposed via preload script
           window.api.cancelCapture()
         }}
       />

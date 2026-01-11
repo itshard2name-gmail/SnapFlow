@@ -26,7 +26,6 @@ export function CaptureCard({
   const handleCopyClick = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()
     try {
-      // @ts-ignore: window.api is exposed via preload script
       const success = await window.api.copyImageToClipboard(capture.filePath)
       if (success) {
         setShowCopied(true)
