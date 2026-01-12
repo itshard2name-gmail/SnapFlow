@@ -333,7 +333,7 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
             height: 0,
             fill: 'rgba(255, 255, 255, 0.0001)', // Semi-transparent but hit-testable
             stroke: color,
-            strokeWidth: 6 * resScale,
+            strokeWidth: 4 * resScale,
             strokeUniform: true,
             shadow: new fabric.Shadow({
               color: 'white',
@@ -370,7 +370,7 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
             left: pointer.x,
             top: pointer.y,
             fill: color,
-            fontSize: 40 * resScale,
+            fontSize: 32 * resScale,
             fontFamily: 'sans-serif',
             fontWeight: 'bold',
             shadow: new fabric.Shadow({
