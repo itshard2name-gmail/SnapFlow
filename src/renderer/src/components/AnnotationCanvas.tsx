@@ -223,18 +223,26 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
         const pointer = canvas.getScenePoint(opt.e)
 
         if (activeTool === 'arrow') {
-          const line = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
-            stroke: color,
-            strokeWidth: 10 * resScale,
-            strokeCap: 'round',
-            strokeUniform: true,
-            shadow: new fabric.Shadow({
-              color: 'white',
-              blur: 2 * resScale,
-              offsetX: 0,
-              offsetY: 0
-            })
-          })
+          const tail = new fabric.Polygon(
+            [
+              { x: pointer.x, y: pointer.y },
+              { x: pointer.x, y: pointer.y },
+              { x: pointer.x, y: pointer.y },
+              { x: pointer.x, y: pointer.y }
+            ],
+            {
+              fill: color,
+              selectable: false,
+              evented: false,
+              strokeUniform: true,
+              shadow: new fabric.Shadow({
+                color: 'white',
+                blur: 2 * resScale,
+                offsetX: 0,
+                offsetY: 0
+              })
+            }
+          )
 
           const head = new fabric.Triangle({
             width: 32 * resScale,
@@ -255,13 +263,32 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
             })
           })
 
-          canvas.add(line, head)
+          canvas.add(tail, head)
 
           const onMove = (moveOpt: fabric.TPointerEventInfo): void => {
             const p = canvas.getScenePoint(moveOpt.e)
-            line.set({ x2: p.x, y2: p.y })
             const dx = p.x - pointer.x
             const dy = p.y - pointer.y
+            const len = Math.sqrt(dx * dx + dy * dy)
+            if (len < 1) return
+
+            const ux = dx / len
+            const uy = dy / len
+            const nx = -uy
+            const ny = ux
+
+            const w1 = 3 * resScale // Thin start
+            const w2 = 12 * resScale // Thick end
+
+            const p1 = { x: pointer.x + (w1 / 2) * nx, y: pointer.y + (w1 / 2) * ny }
+            const p2 = { x: pointer.x - (w1 / 2) * nx, y: pointer.y - (w1 / 2) * ny }
+            const p3 = { x: p.x - (w2 / 2) * nx, y: p.y - (w2 / 2) * ny }
+            const p4 = { x: p.x + (w2 / 2) * nx, y: p.y + (w2 / 2) * ny }
+
+            tail.set({
+              points: [p1, p2, p3, p4]
+            })
+
             const angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90
             head.set({ left: p.x, top: p.y, angle })
             canvas.renderAll()
@@ -272,8 +299,8 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
             canvas.off('mouse:up', onUp)
 
             // Remove individual components and add as a group for manipulation
-            canvas.remove(line, head)
-            const arrowGroup = new fabric.Group([line, head], {
+            canvas.remove(tail, head)
+            const arrowGroup = new fabric.Group([tail, head], {
               selectable: true,
               hasControls: true,
               lockScalingFlip: true
