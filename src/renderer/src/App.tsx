@@ -72,6 +72,7 @@ function App(): ReactElement {
 
       setDetailCaptureId(null)
       fetchCaptures()
+      fetchCounts()
     } catch (error) {
       console.error('Failed to delete capture:', error)
     }
@@ -81,6 +82,7 @@ function App(): ReactElement {
     try {
       await window.api.restoreCapture(id)
       fetchCaptures()
+      fetchCounts()
     } catch (error) {
       console.error('Failed to restore capture:', error)
     }
@@ -93,6 +95,7 @@ function App(): ReactElement {
     try {
       await window.api.emptyTrash()
       fetchCaptures()
+      fetchCounts()
     } catch (error) {
       console.error('Failed to empty trash:', error)
     }
@@ -237,7 +240,10 @@ function App(): ReactElement {
           onSelect={setDetailCaptureId}
           onClose={() => setDetailCaptureId(null)}
           onDelete={handleDelete}
-          onRename={fetchCaptures}
+          onRename={() => {
+            fetchCaptures()
+            fetchCounts()
+          }}
         />
       )}
     </div>
