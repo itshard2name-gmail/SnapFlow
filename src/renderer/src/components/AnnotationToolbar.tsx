@@ -1,3 +1,4 @@
+import { ReactElement } from 'react'
 import { AnnotationTool } from './AnnotationCanvas'
 
 interface AnnotationToolbarProps {
@@ -9,8 +10,8 @@ interface AnnotationToolbarProps {
   onRedo: () => void
   onSave: () => void
   onCopy: () => void
+  onExport: () => void
   copySuccess: boolean
-  onCancel: () => void
 }
 
 export function AnnotationToolbar({
@@ -22,9 +23,9 @@ export function AnnotationToolbar({
   onRedo,
   onSave,
   onCopy,
-  copySuccess,
-  onCancel
-}: AnnotationToolbarProps): React.JSX.Element {
+  onExport,
+  copySuccess
+}: AnnotationToolbarProps): ReactElement {
   const tools: { id: AnnotationTool; label: string; icon: string }[] = [
     { id: 'select', label: 'Select', icon: '↖' },
     { id: 'arrow', label: 'Arrow', icon: '↗' },
@@ -37,67 +38,75 @@ export function AnnotationToolbar({
   const colors = ['#FF0000', '#FF00FF', '#00FF00', '#FFFF00', '#00FFFF', '#FFFFFF']
 
   return (
-    <div className="w-64 h-full flex flex-col bg-[#0a0a12] border-r border-white/5 shadow-2xl z-[60] shrink-0 overflow-hidden">
-      {/* App Branding - Condenses on small screens (HEIGHT BASED) */}
-      <div className="px-6 py-4 [@media(min-height:800px)]:py-8 items-center gap-3 opacity-50 shrink-0 hidden [@media(min-height:650px)]:flex">
-        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white text-xs">
-          ✎
+    <div className="w-64 h-full flex flex-col glass border-r border-white/5 z-[60] shrink-0 overflow-hidden rounded-none">
+      {/* 1. App Branding - Bit-for-Bit Sync with Sidebar.tsx */}
+      <div className="px-6 mb-8 flex items-center gap-3 shrink-0 pt-6">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/20 flex items-center justify-center text-white">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-6 h-6"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="14.31" y1="8" x2="20.05" y2="17.94" />
+            <line x1="9.69" y1="8" x2="21.17" y2="8" />
+            <line x1="7.38" y1="12" x2="13.12" y2="2.06" />
+            <line x1="9.69" y1="16" x2="3.95" y2="6.06" />
+            <line x1="14.31" y1="16" x2="2.83" y2="16" />
+            <line x1="16.62" y1="12" x2="10.88" y2="21.94" />
+          </svg>
         </div>
         <div>
-          <h1 className="text-sm font-bold text-white tracking-tight">Annotating</h1>
-          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-            Edition Mode
+          <h1 className="text-lg font-bold text-white tracking-tight leading-none">Scope</h1>
+          <span className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">
+            Creative Toolkit
           </span>
         </div>
       </div>
 
-      <div className="flex-1 w-full flex flex-col overflow-y-auto no-scrollbar custom-scrollbar min-h-0 py-4">
-        {/* Tools Section */}
-        <div className="px-4 space-y-1 mb-4 min-[800px]:mb-6">
-          <h3 className="px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">
-            Selection Tools
+      <div className="flex-1 w-full flex flex-col overflow-y-auto no-scrollbar custom-scrollbar min-h-0">
+        {/* 2. Design Tools Section */}
+        <div className="px-3 mb-8">
+          <h3 className="px-3 text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-3 opacity-60">
+            Design Tools
           </h3>
-          <div className="space-y-1">
+          <nav className="space-y-1">
             {tools.map((tool) => (
-              <button
+              <div
                 key={tool.id}
                 onClick={() => setActiveTool(tool.id)}
-                className={`w-full px-4 py-1.5 [@media(min-height:800px)]:py-2.5 flex items-center gap-3 rounded-xl transition-all ${
+                className={`px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-3 cursor-pointer transition-all ${
                   activeTool === tool.id
-                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
+                    ? 'bg-white/10 text-white shadow-sm backdrop-blur-md'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
                 }`}
-                title={tool.label}
               >
-                <span className="text-lg [@media(min-height:800px)]:text-xl w-6 flex justify-center">
-                  {tool.icon}
-                </span>
-                <span className="text-xs [@media(min-height:800px)]:text-sm font-medium">
-                  {tool.label}
-                </span>
-              </button>
+                <span className="text-lg w-6 flex justify-center">{tool.icon}</span>
+                <span className="flex-1 text-xs">{tool.label}</span>
+              </div>
             ))}
-          </div>
+          </nav>
         </div>
 
-        <div className="px-6 mb-4 min-[800px]:mb-6">
-          <div className="h-px bg-white/5" />
-        </div>
-
-        {/* Colors Section */}
-        <div className="px-4 mb-4 [@media(min-height:800px)]:mb-6">
-          <h3 className="px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-3">
-            Active Color
+        {/* 3. Properties Section */}
+        <div className="px-6 mb-8">
+          <h3 className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-4 opacity-60">
+            Stroke Color
           </h3>
-          <div className="grid grid-cols-6 gap-2 px-3">
+          <div className="grid grid-cols-6 gap-2">
             {colors.map((c) => (
               <button
                 key={c}
                 onClick={() => setColor(c)}
-                className={`w-5 h-5 [@media(min-height:800px)]:w-6 [@media(min-height:800px)]:h-6 rounded-full border border-white/20 transition-all ${
+                className={`w-7 h-7 rounded-full border border-white/20 transition-all ${
                   color === c
-                    ? 'scale-125 ring-2 ring-blue-500 ring-offset-2 ring-offset-[#0a0a12]'
-                    : 'hover:scale-110'
+                    ? 'scale-110 ring-2 ring-blue-500 ring-offset-2 ring-offset-[#0d0d1a]'
+                    : 'hover:scale-110 opacity-70 hover:opacity-100'
                 }`}
                 style={{ backgroundColor: c }}
               />
@@ -105,56 +114,64 @@ export function AnnotationToolbar({
           </div>
         </div>
 
-        <div className="px-6 mb-4 [@media(min-height:800px)]:mb-6">
+        <div className="px-6 mb-8">
           <div className="h-px bg-white/5" />
         </div>
 
-        {/* Actions Section */}
-        <div className="px-4 space-y-3 mt-4 pb-8">
-          <div className="flex gap-2 px-2">
-            <button
+        {/* 4. Canvas Operations Section */}
+        <div className="px-3 mb-10">
+          <h3 className="px-3 text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-3 opacity-60">
+            Operations
+          </h3>
+          <nav className="space-y-1">
+            <div
               onClick={onUndo}
-              className="flex-1 h-9 [@media(min-height:800px)]:h-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-all border border-white/5 bg-white/5"
-              title="Undo"
+              className="px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-3 cursor-pointer transition-colors text-slate-400 hover:bg-white/5 hover:text-white"
             >
-              ↺ <span className="ml-2 text-[10px] font-bold">UNDO</span>
-            </button>
-            <button
-              onClick={onRedo}
-              className="flex-1 h-9 [@media(min-height:800px)]:h-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-all border border-white/5 bg-white/5"
-              title="Redo"
-            >
-              ↻ <span className="ml-2 text-[10px] font-bold">REDO</span>
-            </button>
-          </div>
+              <span className="text-lg w-6 flex justify-center opacity-70">↺</span>
+              <span className="flex-1 text-xs">Undo Changes</span>
+            </div>
 
-          <div className="px-2 space-y-2">
-            <button
+            <div
+              onClick={onRedo}
+              className="px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-3 cursor-pointer transition-colors text-slate-400 hover:bg-white/5 hover:text-white"
+            >
+              <span className="text-lg w-6 flex justify-center opacity-70">↻</span>
+              <span className="flex-1 text-xs">Redo Changes</span>
+            </div>
+
+            <div
               onClick={onCopy}
-              className={`w-full py-2.5 [@media(min-height:800px)]:py-3 rounded-xl text-[10px] font-bold tracking-widest transition-all border ${
+              className={`px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-3 cursor-pointer transition-colors mt-2 ${
                 copySuccess
-                  ? 'bg-green-600 text-white border-green-500 shadow-lg shadow-green-500/20'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10'
+                  ? 'bg-green-500/10 text-green-400 ring-1 ring-green-500/20'
+                  : 'text-slate-400 hover:bg-white/5 hover:text-white'
               }`}
             >
-              {copySuccess ? 'COPIED ✅' : 'COPY IMAGE'}
-            </button>
-            <button
-              onClick={onSave}
-              className="w-full py-2.5 [@media(min-height:800px)]:py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-bold tracking-widest shadow-lg shadow-blue-500/20 transition-colors"
-            >
-              SAVE CHANGES
-            </button>
-          </div>
+              <span className="text-lg w-6 flex justify-center">{copySuccess ? '✓' : '📋'}</span>
+              <span className="flex-1 text-xs">
+                {copySuccess ? 'Copied to Clipboard' : 'Copy Image'}
+              </span>
+            </div>
 
-          <div className="pt-2 px-2">
-            <button
-              onClick={onCancel}
-              className="w-full py-2 bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-slate-500 rounded-xl text-[9px] font-bold tracking-[0.2em] transition-all border border-white/5"
+            <div
+              onClick={onExport}
+              className="px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-3 cursor-pointer transition-colors text-slate-400 hover:bg-white/5 hover:text-white"
             >
-              CANCEL
-            </button>
-          </div>
+              <span className="text-lg w-6 flex justify-center opacity-70">💾</span>
+              <span className="text-xs flex-1">Export to File...</span>
+            </div>
+          </nav>
+        </div>
+
+        {/* Fixed System Footer (Primary Actions) */}
+        <div className="mt-auto px-6 pt-4 border-t border-white/5 pb-8">
+          <button
+            onClick={onSave}
+            className="w-full h-11 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-black tracking-[0.1em] shadow-lg shadow-blue-500/20 transition-all active:scale-[0.97] flex items-center justify-center gap-2"
+          >
+            <span>✓</span> SAVE CHANGES
+          </button>
         </div>
       </div>
     </div>

@@ -1,4 +1,11 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react'
+import {
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+  useCallback,
+  ReactElement
+} from 'react'
 import * as fabric from 'fabric'
 
 export type AnnotationTool = 'select' | 'pen' | 'arrow' | 'rect' | 'text' | 'mosaic'
@@ -8,6 +15,8 @@ interface AnnotationCanvasProps {
   activeTool: AnnotationTool
   color: string
   onToolChange?: (tool: AnnotationTool) => void
+  scale?: number
+  position?: { x: number; y: number }
 }
 
 export interface AnnotationCanvasHandle {
@@ -18,7 +27,10 @@ export interface AnnotationCanvasHandle {
 }
 
 export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProps>(
-  ({ imagePath, activeTool, color, onToolChange }, ref): React.JSX.Element => {
+  (
+    { imagePath, activeTool, color, onToolChange, scale = 1, position = { x: 0, y: 0 } },
+    ref
+  ): ReactElement => {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const fabricCanvasRef = useRef<fabric.Canvas | null>(null)
@@ -125,18 +137,6 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
         }
       })
 
-      // Zoom Handler
-      canvas.on('mouse:wheel', (opt) => {
-        const delta = opt.e.deltaY
-        let zoom = canvas.getZoom()
-        zoom *= 0.999 ** delta
-        if (zoom > 20) zoom = 20
-        if (zoom < 0.01) zoom = 0.01
-        canvas.zoomToPoint(new fabric.Point(opt.e.offsetX, opt.e.offsetY), zoom)
-        opt.e.preventDefault()
-        opt.e.stopPropagation()
-      })
-
       return (): void => {
         resizeObserver.disconnect()
         canvas.dispose()
@@ -149,11 +149,10 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
 
       const resScale = resolutionScaleRef.current
       canvas.isDrawingMode = activeTool === 'pen'
-
-      if (canvas.isDrawingMode) {
+      if (activeTool === 'pen') {
         canvas.freeDrawingBrush = new fabric.PencilBrush(canvas)
+        canvas.freeDrawingBrush.width = 4 * resScale
         canvas.freeDrawingBrush.color = color
-        canvas.freeDrawingBrush.width = 5 * resScale
         canvas.freeDrawingBrush.shadow = new fabric.Shadow({
           color: 'rgba(255,255,255,0.5)',
           blur: 2 * resScale,
@@ -161,6 +160,15 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
           offsetY: 1 * resScale
         })
       }
+      canvas.calcOffset()
+      canvas.renderAll()
+    }, [activeTool, color, imagePath, scale, position])
+
+    useEffect(() => {
+      const canvas = fabricCanvasRef.current
+      if (!canvas) return
+
+      const resScale = resolutionScaleRef.current
 
       const handleMouseDown = (opt: fabric.TPointerEventInfo): void => {
         if (canvas.isDrawingMode) return
