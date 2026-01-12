@@ -152,7 +152,7 @@ export function AnnotationToolbar({
               onClick={onCancel}
               className="w-full py-2 bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-slate-500 rounded-xl text-[9px] font-bold tracking-[0.2em] transition-all border border-white/5"
             >
-              CANCEL (ESC)
+              CANCEL
             </button>
           </div>
         </div>

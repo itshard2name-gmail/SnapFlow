@@ -169,9 +169,7 @@ export function DetailView({
     const handleKeyDown = (e: KeyboardEvent): void => {
       // Priority 1: ESC key
       if (e.key === 'Escape') {
-        if (isAnnotating) {
-          setIsAnnotating(false)
-        } else {
+        if (!isAnnotating) {
           onClose()
         }
         return

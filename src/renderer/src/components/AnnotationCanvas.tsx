@@ -577,6 +577,14 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
           e.preventDefault()
           return
         }
+
+        // 6. Escape (Switch to select mode)
+        if (key === 'escape') {
+          if (onToolChange) {
+            onToolChange('select')
+          }
+          return
+        }
       }
 
       window.addEventListener('keydown', handleKeyDown)
