@@ -225,20 +225,20 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
         if (activeTool === 'arrow') {
           const line = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
             stroke: color,
-            strokeWidth: 8 * resScale,
+            strokeWidth: 10 * resScale,
             strokeCap: 'round',
             strokeUniform: true,
             shadow: new fabric.Shadow({
               color: 'white',
-              blur: 1 * resScale,
-              offsetX: 1 * resScale,
-              offsetY: 1 * resScale
+              blur: 2 * resScale,
+              offsetX: 0,
+              offsetY: 0
             })
           })
 
           const head = new fabric.Triangle({
-            width: 28 * resScale,
-            height: 28 * resScale,
+            width: 32 * resScale,
+            height: 38 * resScale,
             fill: color,
             left: pointer.x,
             top: pointer.y,
@@ -249,9 +249,9 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
             evented: false,
             shadow: new fabric.Shadow({
               color: 'white',
-              blur: 1 * resScale,
-              offsetX: 1 * resScale,
-              offsetY: 1 * resScale
+              blur: 2 * resScale,
+              offsetX: 0,
+              offsetY: 0
             })
           })
 
